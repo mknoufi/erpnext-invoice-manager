@@ -117,7 +117,7 @@ function dashboardReducer(state: DashboardState, action: DashboardAction): Dashb
   }
 }
 
-const CashierDashboard: React.FC = () => {
+const CashierDashboard: React.FC = React.memo(() => {
   const { state: cashierState } = useCashier();
   const { settings } = useSettings();
   const [state, dispatch] = useReducer(dashboardReducer, initialState);
@@ -148,6 +148,15 @@ const CashierDashboard: React.FC = () => {
   const clearSelectedInvoices = useCallback(() => {
     dispatch({ type: 'CLEAR_SELECTED_INVOICES' });
   }, []);
+
+  // Memoized invoice items for better performance
+  const memoizedTodayInvoices = React.useMemo(() => todayInvoices, [todayInvoices]);
+  const memoizedPendingDeliveries = React.useMemo(() => pendingDeliveries, [pendingDeliveries]);
+
+  // Memoized selected invoices mapping for performance
+  const selectedInvoicesMap = React.useMemo(() => {
+    return new Set(state.selectedInvoices.map(inv => inv.id));
+  }, [state.selectedInvoices]);
 
   const loadData = useCallback(async () => {
     try {
@@ -235,19 +244,19 @@ const CashierDashboard: React.FC = () => {
 
       <Paper sx={{ p: 2 }}>
         <Tabs value={state.tab} onChange={(_, v) => dispatch({ type: 'SET_TAB', tab: v })} variant="scrollable" allowScrollButtonsMobile>
-          <Tab label={`Today Invoices (${todayInvoices.length})`} />
-          <Tab label={`Pending Delivery (${pendingDeliveries.length})`} />
+          <Tab label={`Today Invoices (${memoizedTodayInvoices.length})`} />
+          <Tab label={`Pending Delivery (${memoizedPendingDeliveries.length})`} />
         </Tabs>
         <Box sx={{ mt: 2 }}>
           {state.tab === 0 && (
             <Grid container spacing={2}>
-              {todayInvoices.map((inv) => (
+              {memoizedTodayInvoices.map((inv) => (
                 <Grid item xs={12} md={6} lg={4} key={inv.id}>
-                  <Paper sx={{ p: 2, border: state.selectedInvoices.find(s => s.id === inv.id) ? '2px solid #1976d2' : '1px solid #e0e0e0' }}>
+                  <Paper sx={{ p: 2, border: selectedInvoicesMap.has(inv.id) ? '2px solid #1976d2' : '1px solid #e0e0e0' }}>
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={state.selectedInvoices.some(s => s.id === inv.id)}
+                          checked={selectedInvoicesMap.has(inv.id)}
                           onChange={() => toggleInvoiceSelection(inv)}
                         />
                       }
@@ -265,7 +274,7 @@ const CashierDashboard: React.FC = () => {
           )}
           {state.tab === 1 && (
             <Grid container spacing={2}>
-              {pendingDeliveries.map((inv) => (
+              {memoizedPendingDeliveries.map((inv) => (
                 <Grid item xs={12} md={6} lg={4} key={inv.id}>
                   <Paper sx={{ p: 2 }}>
                     <Typography variant="subtitle1">{inv.customerName}</Typography>
@@ -284,7 +293,7 @@ const CashierDashboard: React.FC = () => {
     <BulkDiscountDialog
       open={state.modals.showDiscount}
       onClose={() => closeModal('showDiscount')}
-      invoices={state.tab === 0 ? todayInvoices : pendingDeliveries}
+      invoices={state.tab === 0 ? memoizedTodayInvoices : memoizedPendingDeliveries}
       onSubmit={async (invoiceIds, totalDiscount) => {
         try {
           // Manager approval threshold (could be feature flag/setting later)
@@ -317,7 +326,7 @@ const CashierDashboard: React.FC = () => {
     <PaymentModal
       open={state.modals.showPayment}
       onClose={() => closeModal('showPayment')}
-      invoices={state.tab === 0 ? todayInvoices : pendingDeliveries}
+      invoices={state.tab === 0 ? memoizedTodayInvoices : memoizedPendingDeliveries}
       onSubmit={async ({ invoiceId, mode, amount, reference, tags }) => {
         try {
           await posService.recordPayment({
@@ -404,7 +413,9 @@ const CashierDashboard: React.FC = () => {
     </Snackbar>
     </>
   );
-};
+});
+
+CashierDashboard.displayName = 'CashierDashboard';
 
 export default CashierDashboard;
 

@@ -111,10 +111,11 @@ describe('CashierCloseModal', () => {
     await waitFor(() => {
       const countedTotalElements = screen.getAllByText('₹5,000.00');
       expect(countedTotalElements.length).toBeGreaterThan(0);
-      // Verify we have both Expected Total and Counted Total with the same value
-      expect(screen.getByText('Expected Total')).toBeInTheDocument();
-      expect(screen.getByText('Counted Total')).toBeInTheDocument();
     });
+    
+    // Verify we have both Expected Total and Counted Total labels
+    expect(screen.getByText('Expected Total')).toBeInTheDocument();
+    expect(screen.getByText('Counted Total')).toBeInTheDocument();
   });
 
   it('shows variance calculation', async () => {

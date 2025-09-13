@@ -25,6 +25,7 @@ import { formatCurrency } from '../utils/formatters';
 import DashboardStats from './DashboardStats';
 import LoadingSkeleton from './LoadingSkeleton';
 import PaymentGateway from './payments/PaymentGateway';
+import logger from '../utils/logger';
 
 const InvoiceList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Unpaid' | 'Overdue'>('All');
@@ -81,7 +82,7 @@ const InvoiceList: React.FC = () => {
   };
 
   const handlePaymentSuccess = (paymentData: any) => {
-    console.log('Payment successful:', paymentData);
+    logger.info('Payment successful:', paymentData);
     setShowPaymentGateway(false);
     setPaymentInvoice(null);
     refetch(); // Refresh the invoice list
