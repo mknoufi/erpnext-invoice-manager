@@ -33,6 +33,8 @@ import { SecurityProvider, useSecurity } from './contexts/SecurityContext';
 
 // Components
 import ErrorBoundary from './components/ErrorBoundary';
+import ApiErrorBoundary from './components/ApiErrorBoundary';
+import PosErrorBoundary from './components/PosErrorBoundary';
 import InvoiceList from './components/InvoiceList';
 import SettingsPage from './components/settings/SettingsPage';
 import LoginPage from './pages/LoginPage';
@@ -250,7 +252,9 @@ const AppContent = () => {
             {/* Protected routes */}
             <Route path="/" element={
               <ProtectedLayout>
-                <InvoiceList />
+                <ApiErrorBoundary componentName="InvoiceList">
+                  <InvoiceList />
+                </ApiErrorBoundary>
               </ProtectedLayout>
             } />
             <Route path="/settings" element={
@@ -265,7 +269,9 @@ const AppContent = () => {
             } />
             <Route path="/analytics" element={
               <ProtectedLayout>
-                <AnalyticsDashboard />
+                <ApiErrorBoundary componentName="AnalyticsDashboard">
+                  <AnalyticsDashboard />
+                </ApiErrorBoundary>
               </ProtectedLayout>
             } />
             <Route path="/account" element={
@@ -280,7 +286,9 @@ const AppContent = () => {
             } />
             <Route path="/cashier" element={
               <CashierProvider>
-                <CashierDashboard />
+                <PosErrorBoundary>
+                  <CashierDashboard />
+                </PosErrorBoundary>
               </CashierProvider>
             } />
             
