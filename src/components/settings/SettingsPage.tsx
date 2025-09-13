@@ -9,7 +9,7 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { Settings as SettingsIcon, Cloud, Palette, Tune, Security, Extension, Payment, AccountBalance } from '@mui/icons-material';
+import { Settings as SettingsIcon, Cloud, Palette, Tune, Extension, Payment, AccountBalance } from '@mui/icons-material';
 import { useSettings } from '../../contexts/SettingsContext';
 import ErpNextSettings from './ErpNextSettings';
 import ThemeSettings from './ThemeSettings';

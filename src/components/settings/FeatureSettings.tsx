@@ -26,7 +26,6 @@ const FeatureSettings: React.FC = () => {
   const { 
     settings, 
     toggleFeature, 
-    isFeatureEnabled, 
     getAvailableFeatures,
     upgradeSettings
   } = useSettings();
