@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LocalizationProvider } from '@mui/x-date-pickers';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, Outlet } from 'react-router-dom';
-import { SnackbarProvider } from 'notistack';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { NotificationProvider } from './components/NotificationSystem';
 import { 
   Box, 
   AppBar, 
@@ -23,7 +23,8 @@ import {
   Lock as LockIcon,
   Person as PersonIcon,
   Logout as LogoutIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  Analytics as AnalyticsIcon
 } from '@mui/icons-material';
 
 // Contexts
@@ -31,6 +32,7 @@ import { SettingsProvider } from './contexts/SettingsContext';
 import { SecurityProvider, useSecurity } from './contexts/SecurityContext';
 
 // Components
+import ErrorBoundary from './components/ErrorBoundary';
 import InvoiceList from './components/InvoiceList';
 import SettingsPage from './components/settings/SettingsPage';
 import LoginPage from './pages/LoginPage';
@@ -38,6 +40,14 @@ import Verify2FAPage from './pages/Verify2FAPage';
 import AuditLog from './components/security/AuditLog';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import TwoFactorAuthSetup from './components/security/TwoFactorAuthSetup';
+import { CashierProvider } from './contexts/CashierContext';
+import CashierLogin from './pages/CashierLogin';
+import CashierDashboard from './pages/CashierDashboard';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import OfflineIndicator from './components/OfflineIndicator';
+import AnalyticsDashboard from './components/analytics/AnalyticsDashboard';
+import { pwaService } from './utils/pwaService';
+import logger from './utils/logger';
 
 // Create a theme instance
 const theme = createTheme({
@@ -110,6 +120,15 @@ const Navigation = () => {
               startIcon={<HomeIcon />}
             >
               Home
+            </Button>
+            
+            <Button
+              color={isActive('/analytics') ? 'primary' : 'inherit'}
+              component={Link}
+              to="/analytics"
+              startIcon={<AnalyticsIcon />}
+            >
+              Analytics
             </Button>
             
             {hasPermission('canViewAuditLogs') && (
@@ -217,7 +236,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 // Main App component
 const AppContent = () => {
   return (
-    <>
+    <ErrorBoundary>
       <CssBaseline />
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <Navigation />
@@ -229,47 +248,85 @@ const AppContent = () => {
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             
             {/* Protected routes */}
-            <Route element={
+            <Route path="/" element={
               <ProtectedLayout>
-                <Routes>
-                  <Route path="/" element={<InvoiceList />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/audit-logs" element={<AuditLog />} />
-                  <Route path="/account" element={<div>Account Settings</div>} />
-                  
-                  {/* Catch-all route for protected paths */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                <InvoiceList />
               </ProtectedLayout>
             } />
+            <Route path="/settings" element={
+              <ProtectedLayout>
+                <SettingsPage />
+              </ProtectedLayout>
+            } />
+            <Route path="/audit-logs" element={
+              <ProtectedLayout>
+                <AuditLog />
+              </ProtectedLayout>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedLayout>
+                <AnalyticsDashboard />
+              </ProtectedLayout>
+            } />
+            <Route path="/account" element={
+              <ProtectedLayout>
+                <div>Account Settings</div>
+              </ProtectedLayout>
+            } />
+            <Route path="/cashier-login" element={
+              <CashierProvider>
+                <CashierLogin />
+              </CashierProvider>
+            } />
+            <Route path="/cashier" element={
+              <CashierProvider>
+                <CashierDashboard />
+              </CashierProvider>
+            } />
             
-            {/* Catch-all route for public paths */}
+            {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Box>
       </Box>
-    </>
+    </ErrorBoundary>
   );
 };
 
 // Main App component with providers
 const App = () => {
+  // Initialize PWA service
+  React.useEffect(() => {
+    const initializePWA = async () => {
+      try {
+        await pwaService.registerServiceWorker();
+        await pwaService.requestNotificationPermission();
+        logger.info('PWA initialized successfully');
+      } catch (error) {
+        console.error('PWA initialization failed:', error);
+      }
+    };
+
+    initializePWA();
+  }, []);
+
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <ThemeProvider theme={theme}>
         <QueryClientProvider client={queryClient}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <SettingsProvider>
               <SecurityProvider>
-                <SnackbarProvider 
-                  maxSnack={3}
-                  anchorOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
-                  }}
-                >
+                <NotificationProvider>
                   <AppContent />
-                </SnackbarProvider>
+                  <PWAInstallPrompt />
+                  <OfflineIndicator />
+                </NotificationProvider>
               </SecurityProvider>
             </SettingsProvider>
           </LocalizationProvider>

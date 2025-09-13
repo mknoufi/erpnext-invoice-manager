@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import logger from '../utils/logger';
 import { Box, CircularProgress } from '@mui/material';
 import { AuthState, AuthUser, UserRole } from '../types/security';
 
@@ -84,11 +85,29 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
     const initializeAuth = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        if (token) {
-          // TODO: Verify token with backend
-          // const user = await verifyToken(token);
-          // dispatch({ type: 'INITIALIZE', payload: { user } });
-          dispatch({ type: 'INITIALIZE', payload: { user: null } }); // Temporary until backend is ready
+        if (token && token.startsWith('demo-token-')) {
+          // For demo purposes, create a mock user if token exists
+          const mockUser: AuthUser = {
+            id: '1',
+            email: 'admin@example.com',
+            name: 'Admin User',
+            role: UserRole.ADMIN,
+            is2FAEnabled: false,
+            permissions: {
+              canViewInvoices: true,
+              canCreateInvoices: true,
+              canEditInvoices: true,
+              canDeleteInvoices: true,
+              canManageUsers: true,
+              canViewReports: true,
+              canManageSettings: true,
+              canProcessPayments: true,
+              canViewAuditLogs: true,
+            },
+            lastLogin: new Date(),
+            lastLoginIP: '127.0.0.1',
+          };
+          dispatch({ type: 'INITIALIZE', payload: { user: mockUser } });
         } else {
           dispatch({ type: 'INITIALIZE', payload: { user: null } });
         }
@@ -104,12 +123,18 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Login function
   const login = async (email: string, password: string) => {
     dispatch({ type: 'LOGIN_REQUEST' });
+    
+    // Simple validation for demo purposes
+    if (!email || !password) {
+      dispatch({ 
+        type: 'LOGIN_FAILURE', 
+        payload: { error: 'Email and password are required' } 
+      });
+      throw new Error('Email and password are required');
+    }
+    
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.post('/auth/login', { email, password });
-      // const { user, token } = response.data;
-      
-      // Simulated response for now
+      // Simulated response for now - accept any email/password for demo
       const mockUser: AuthUser = {
         id: '1',
         email,
@@ -131,22 +156,24 @@ export const SecurityProvider: React.FC<{ children: ReactNode }> = ({ children }
         lastLoginIP: '127.0.0.1',
       };
       
-      // localStorage.setItem('authToken', token);
+      // Store auth token
+      localStorage.setItem('authToken', 'demo-token-' + Date.now());
+      
       dispatch({ 
         type: 'LOGIN_SUCCESS', 
         payload: { user: mockUser } 
       });
       
-      // Use setTimeout to ensure navigation happens after state update
-      setTimeout(() => {
-        if (!mockUser.is2FAEnabled) {
-          navigate('/');
-        }
-      }, 0);
+      logger.info('Login successful, navigating to dashboard...');
+      
+      // Navigate immediately after state update
+      navigate('/', { replace: true });
+      
     } catch (error) {
+      console.error('Login error:', error);
       dispatch({ 
         type: 'LOGIN_FAILURE', 
-        payload: { error: 'Invalid credentials' } 
+        payload: { error: 'Login failed. Please try again.' } 
       });
       throw error;
     }
