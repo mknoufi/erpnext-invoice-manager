@@ -38,6 +38,7 @@ import {
   createDenominationEntries
 } from '../../utils/cashierUtils';
 import logger from '../../utils/logger';
+import telemetryService from '../../services/telemetryService';
 
 interface CashierCloseModalProps {
   open: boolean;
@@ -162,6 +163,15 @@ export const CashierCloseModal: React.FC<CashierCloseModalProps> = ({
 
       if (onSubmit) {
         await onSubmit(payload);
+        
+        // Track audit event
+        await telemetryService.trackCashierCloseSubmitted({
+          cashierId,
+          closeId: `temp_${Date.now()}`, // In real implementation, this would come from API response
+          expectedAmount,
+          countedAmount: countedTotal,
+          variance,
+        });
       }
 
       // Reset form

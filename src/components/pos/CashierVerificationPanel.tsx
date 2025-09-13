@@ -41,6 +41,7 @@ import {
 import { CashierCloseResponse } from '../../types/cashier';
 import { formatCurrency } from '../../utils/cashierUtils';
 import logger from '../../utils/logger';
+import telemetryService from '../../services/telemetryService';
 
 interface CashierVerificationPanelProps {
   onRefresh?: () => void;
@@ -243,11 +244,22 @@ export const CashierVerificationPanel: React.FC<CashierVerificationPanelProps> =
   // Approve mutation
   const approveMutation = useMutation({
     mutationFn: verifyCashierClose,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       logger.info('cashier_close_verified', {
         id: data.id,
         journalEntryId: data.journal_entry_id,
       });
+      
+      // Track audit event
+      await telemetryService.trackCashierCloseVerified({
+        cashierId: `cashier_${data.id.split('_')[1]}`, // Extract from ID
+        closeId: data.id,
+        journalEntryId: data.journal_entry_id || '',
+        expectedAmount: 0, // Would need to fetch from close details
+        countedAmount: 0, // Would need to fetch from close details
+        variance: data.variance || 0,
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['pendingCashierCloses'] });
       setVerificationDialogOpen(false);
       setSelectedClose(null);
@@ -261,10 +273,21 @@ export const CashierVerificationPanel: React.FC<CashierVerificationPanelProps> =
   // Reject mutation
   const rejectMutation = useMutation({
     mutationFn: rejectCashierClose,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       logger.info('cashier_close_rejected', {
         id: data.id,
       });
+      
+      // Track audit event
+      await telemetryService.trackCashierCloseRejected({
+        cashierId: `cashier_${data.id.split('_')[1]}`, // Extract from ID
+        closeId: data.id,
+        rejectionReason: 'Rejected by accountant', // Would come from form
+        expectedAmount: 0, // Would need to fetch from close details
+        countedAmount: 0, // Would need to fetch from close details
+        variance: data.variance || 0,
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['pendingCashierCloses'] });
       setVerificationDialogOpen(false);
       setSelectedClose(null);
