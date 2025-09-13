@@ -1,13 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  ErpNextSettings,
-  SyncSchedule,
-  WebhookConfig,
-  ApiRateLimit,
-  DataEncryption,
-  PerformanceSettings,
-  MonitoringSettings,
-  FieldMapping
+  ErpNextSettings
 } from '../../types/erpnext-settings';
 
 // Validation types

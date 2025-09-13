@@ -11,14 +11,11 @@ import {
   Select, 
   MenuItem, 
   SelectChangeEvent, 
-  InputAdornment, 
-  IconButton, 
-  useTheme,
-  Grid as MuiGrid 
+  InputAdornment
 } from '@mui/material';
 import GridContainer from '../common/GridContainer';
 import GridItem from '../common/GridItem';
-import { Palette, ColorLens, Brightness4, Brightness7, Save, Refresh } from '@mui/icons-material';
+import { ColorLens, Brightness4, Brightness7, Save, Refresh } from '@mui/icons-material';
 import { ChromePicker, ColorResult } from 'react-color';
 import { useSettings } from '../../contexts/SettingsContext';
 
@@ -33,7 +30,6 @@ const fontOptions = [
 
 const ThemeSettings: React.FC = () => {
   const { settings, saveSettings } = useSettings();
-  const theme = useTheme();
   const [showPrimaryPicker, setShowPrimaryPicker] = useState(false);
   const [showSecondaryPicker, setShowSecondaryPicker] = useState(false);
   const [localTheme, setLocalTheme] = useState(settings.theme);
