@@ -21,8 +21,7 @@ import {
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  Refresh as RefreshIcon,
-  FilterList as FilterListIcon
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { formatDistanceToNow } from 'date-fns';
 import { useSecurity } from '../../contexts/SecurityContext';

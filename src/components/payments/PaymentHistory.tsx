@@ -80,14 +80,6 @@ const PaymentHistory: React.FC<PaymentHistoryProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
-  useEffect(() => {
-    loadPayments();
-  }, [invoiceId, loadPayments]);
-
-  useEffect(() => {
-    filterPayments();
-  }, [payments, searchTerm, statusFilter, methodFilter, filterPayments]);
-
   const loadPayments = useCallback(async () => {
     setLoading(true);
     try {
@@ -207,6 +199,14 @@ const PaymentHistory: React.FC<PaymentHistoryProps> = ({
     setFilteredPayments(filtered);
     setTotalPages(Math.ceil(filtered.length / itemsPerPage));
   }, [payments, searchTerm, statusFilter, methodFilter]);
+
+  useEffect(() => {
+    loadPayments();
+  }, [invoiceId, loadPayments]);
+
+  useEffect(() => {
+    filterPayments();
+  }, [payments, searchTerm, statusFilter, methodFilter, filterPayments]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

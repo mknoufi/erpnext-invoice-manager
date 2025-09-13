@@ -4,16 +4,76 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// Mock axios to avoid ESM transform issues in CRA Jest
-jest.mock('axios', () => ({
-	__esModule: true,
-	default: {
-		create: () => ({
-			interceptors: { request: { use: () => {} }, response: { use: () => {} } },
-			get: jest.fn(() => Promise.resolve({ data: {} })),
-			post: jest.fn(() => Promise.resolve({ data: {} })),
-			put: jest.fn(() => Promise.resolve({ data: {} })),
-			delete: jest.fn(() => Promise.resolve({ data: {} }))
-		})
-	}
-}));
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(), // deprecated
+    removeListener: jest.fn(), // deprecated
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
+
+// Mock window.navigator.standalone
+Object.defineProperty(window.navigator, 'standalone', {
+  writable: true,
+  value: false,
+});
+
+// Mock caches API
+Object.defineProperty(window, 'caches', {
+  writable: true,
+  value: {
+    open: jest.fn().mockResolvedValue({
+      match: jest.fn().mockResolvedValue(undefined),
+      put: jest.fn().mockResolvedValue(undefined),
+      keys: jest.fn().mockResolvedValue([]),
+    }),
+    keys: jest.fn().mockResolvedValue([]),
+  },
+});
+
+// Mock service worker
+Object.defineProperty(navigator, 'serviceWorker', {
+  writable: true,
+  value: {
+    register: jest.fn().mockResolvedValue({
+      installing: null,
+      waiting: null,
+      active: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }),
+  },
+});
+
+// Mock Notification API
+Object.defineProperty(window, 'Notification', {
+  writable: true,
+  value: jest.fn().mockImplementation(() => ({
+    close: jest.fn(),
+  })),
+  permission: 'default',
+  requestPermission: jest.fn().mockResolvedValue('default'),
+});
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+};
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+});
+
+// Mock sessionStorage
+Object.defineProperty(window, 'sessionStorage', {
+  value: localStorageMock,
+});
