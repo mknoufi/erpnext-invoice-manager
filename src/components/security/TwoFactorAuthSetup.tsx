@@ -10,8 +10,7 @@ import {
   DialogActions, 
   LinearProgress,
   Alert,
-  Paper,
-  Divider
+  Paper
 } from '@mui/material';
 import { useSecurity } from '../../contexts/SecurityContext';
 import { QRCodeSVG } from 'qrcode.react';
@@ -30,7 +29,7 @@ const TwoFactorAuthSetup: React.FC<TwoFactorAuthSetupProps> = ({ open, onClose }
   const [error, setError] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   
-  const { state } = useSecurity();
+  const { state: _state } = useSecurity();
 
   // Initialize 2FA setup
   useEffect(() => {

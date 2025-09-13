@@ -49,6 +49,8 @@ Object.defineProperty(navigator, 'serviceWorker', {
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
     }),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
   },
 });
 
@@ -58,8 +60,16 @@ Object.defineProperty(window, 'Notification', {
   value: jest.fn().mockImplementation(() => ({
     close: jest.fn(),
   })),
-  permission: 'default',
-  requestPermission: jest.fn().mockResolvedValue('default'),
+});
+
+Object.defineProperty(window.Notification, 'permission', {
+  writable: true,
+  value: 'default',
+});
+
+Object.defineProperty(window.Notification, 'requestPermission', {
+  writable: true,
+  value: jest.fn().mockResolvedValue('default'),
 });
 
 // Mock localStorage
