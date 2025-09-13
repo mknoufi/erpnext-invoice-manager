@@ -16,15 +16,15 @@ jest.mock('../../utils/pwaService', () => ({
     requestNotificationPermission: jest.fn().mockResolvedValue(true),
     isInstallable: jest.fn().mockReturnValue(false),
     installApp: jest.fn().mockResolvedValue(false),
-    cacheData: jest.fn().mockResolvedValue(),
+    cacheData: jest.fn().mockResolvedValue(undefined),
     getCachedData: jest.fn().mockResolvedValue(null),
     getCacheSize: jest.fn().mockResolvedValue(0),
-    clearCache: jest.fn().mockResolvedValue(),
-    sendNotification: jest.fn(),
-    registerBackgroundSync: jest.fn(),
+    clearCache: jest.fn().mockResolvedValue(undefined),
+    sendNotification: jest.fn().mockResolvedValue(undefined),
+    registerBackgroundSync: jest.fn().mockResolvedValue(undefined),
     getOnlineStatus: jest.fn().mockReturnValue(true),
     isOnline: true,
-    setupEventListeners: jest.fn(),
+    setupEventListeners: jest.fn(() => {}),
   }
 }));
 
