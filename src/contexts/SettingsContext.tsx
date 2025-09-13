@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AppSettings, ThemeSettings, FeatureFlags } from '../types/settings';
+import { AppSettings, FeatureFlags } from '../types/settings';
 
 // Default feature flags
 const defaultFeatureFlags: FeatureFlags = {
@@ -12,6 +12,12 @@ const defaultFeatureFlags: FeatureFlags = {
   notifications: true,
   darkMode: true,
   twoFactorAuth: true,
+  posBulkDiscounts: true,
+  posManagerApproval: true,
+  posPayments: true,
+  posPayouts: true,
+  posCashInHand: true,
+  posEndOfDay: true,
 };
 
 // Define available upgrades in order
@@ -36,13 +42,141 @@ const defaultSettings: AppSettings = {
     spacing: 4,
   },
   erpnext: {
+    // Core connection
     url: '',
     apiKey: '',
     apiSecret: '',
     company: '',
-    defaultLedgers: [],
-    syncInterval: 30000, // 30 seconds
-  },
+    version: 'v15',
+    defaultCurrency: 'USD',
+
+    // Auth
+    authMethod: 'api_key',
+
+    // Sync
+    syncDirection: 'bidirectional',
+    syncSchedule: {
+      enabled: false,
+      interval: 60,
+      // the rest provided at runtime when saved
+      startTime: '00:00',
+      endTime: '23:59',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      daysOfWeek: [1, 2, 3, 4, 5],
+      excludeHolidays: true,
+      maxRetryAttempts: 3,
+      retryDelay: 5,
+      batchSize: 100,
+      priority: 'normal'
+    },
+    conflictResolution: 'source',
+    fieldMappings: [],
+    fieldGroups: [],
+
+    // Webhook
+    webhook: {
+      enabled: false,
+      url: '',
+      events: [],
+      timeout: 30,
+    },
+
+    // API config
+    apiConfig: {
+      basePath: '/api/resource',
+      version: 'v1',
+      timeout: 30,
+      retryPolicy: { maxRetries: 3, retryDelay: 5, backoffFactor: 2 },
+      rateLimiting: { enabled: true, requestsPerMinute: 60, throttleDelay: 1000 },
+      compression: true,
+      keepAlive: true,
+    },
+
+    // Security
+    security: {
+      verifySSL: true,
+      enableCORS: true,
+      allowedOrigins: [],
+      enableCSRF: true,
+      dataEncryption: { enabled: true, algorithm: 'aes-256-gcm', keyRotationDays: 90 },
+      ipWhitelist: [],
+      userAgentFiltering: false,
+    },
+
+    // Performance
+    performance: {
+      enableQueryOptimization: true,
+      enableCompression: true,
+      maxConcurrentRequests: 10,
+      requestTimeout: 30,
+      cacheStrategy: 'memory',
+      batchProcessing: { enabled: true, size: 100, delay: 1000 },
+    },
+
+    // Monitoring
+    monitoring: {
+      enableHealthChecks: true,
+      healthCheckInterval: 5,
+      enableMetrics: true,
+      metricsEndpoint: '/metrics',
+      enableAlerting: true,
+      alertThresholds: { errorRate: 5, responseTime: 1000, queueSize: 1000 },
+    },
+
+    // Logging
+    logging: {
+      level: 'info',
+      enableRequestLogging: true,
+      enableAuditLogging: true,
+      logRetentionDays: 30,
+      logFormat: 'json',
+      logToConsole: true,
+      logToFile: false,
+      logFilePath: '/var/log/erpnext-integration.log',
+    },
+
+    // Caching
+    caching: {
+      enabled: true,
+      provider: 'memory',
+      ttl: 3600,
+      namespaced: true,
+      namespace: 'erpnext',
+      encryption: true,
+      compression: true,
+    },
+
+    // Error handling
+    errorHandling: {
+      autoRetryFailed: true,
+      maxRetryAttempts: 3,
+      retryDelay: 5,
+      notifyOnFailure: true,
+      notificationChannels: ['email'],
+    },
+
+    // Advanced
+    advanced: {
+      enableDebugMode: false,
+      enableProfiling: false,
+      enableQueryLogging: false,
+      enablePerformanceMetrics: true,
+      customHeaders: {},
+      customParameters: {},
+      plugins: [],
+      featureFlags: {},
+    },
+
+    // Metadata
+    metadata: {
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system',
+      updatedBy: 'system',
+      version: '1.0.0',
+      tags: ['erpnext', 'integration'],
+    },
+  } as any,
   ui: {
     density: 'comfortable',
     showNotifications: true,

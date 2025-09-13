@@ -24,6 +24,7 @@ const defaultSettings: ErpNextSettings = {
   apiSecret: '',
   company: '',
   version: '14.0.0',
+  defaultCurrency: 'USD',
   
   // Authentication
   authMethod: 'api_key',

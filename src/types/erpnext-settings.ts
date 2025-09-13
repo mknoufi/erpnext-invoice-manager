@@ -1,3 +1,12 @@
+// Re-import types to use in this file
+import type { FieldMapping } from './field-types';
+import type { SyncSchedule } from './sync-schedule';
+import type { WebhookConfig } from './webhook-config';
+import type { ApiRateLimit } from './api-rate-limit';
+import type { DataEncryption } from './data-encryption';
+import type { PerformanceSettings } from './performance-settings';
+import type { MonitoringSettings } from './monitoring-settings';
+
 // Export all types from their respective files
 export * from './field-types';
 export * from './sync-schedule';
@@ -6,15 +15,6 @@ export * from './api-rate-limit';
 export * from './data-encryption';
 export * from './performance-settings';
 export * from './monitoring-settings';
-
-// Re-import types to use in this file
-import { FieldMapping } from './field-types';
-import { SyncSchedule } from './sync-schedule';
-import { WebhookConfig } from './webhook-config';
-import { ApiRateLimit } from './api-rate-limit';
-import { DataEncryption } from './data-encryption';
-import { PerformanceSettings } from './performance-settings';
-import { MonitoringSettings } from './monitoring-settings';
 
 /**
  * Extended ERPNext settings that include all configuration options
@@ -27,6 +27,7 @@ export interface ErpNextSettings {
   apiSecret: string;
   company: string;
   version: string;
+  defaultCurrency: string;
   
   // Authentication
   authMethod: 'api_key' | 'oauth2' | 'jwt' | 'session';
@@ -148,55 +149,6 @@ export interface ErpNextSettings {
   connectionTimeout?: number;
 }
 
-// Field Mapping Interface
-export interface FieldMapping {
-  localField: string;
-  erpnextField: string;
-  dataType: string;
-  required: boolean;
-  label?: string;
-  description?: string;
-  placeholder?: string;
-  group?: string;
-  defaultValue?: any;
-  isReadOnly?: boolean;
-  isHidden?: boolean;
-  isComputed?: boolean;
-  computeExpression?: string;
-  validation?: FieldValidation;
-  controlType?: 'input' | 'select' | 'checkbox' | 'date' | 'datetime' | 'time' | 'textarea' | 'autocomplete';
-  options?: FieldOption[];
-  dependsOn?: string[];
-  showIf?: Record<string, any>;
-  transformIn?: (value: any) => any;
-  transformOut?: (value: any) => any;
-  meta?: Record<string, any>;
-}
-
-// Field Validation Interface
-export interface FieldValidation {
-  required?: boolean;
-  minLength?: number;
-  maxLength?: number;
-  min?: number;
-  max?: number;
-  pattern?: string;
-  errorMessage?: string;
-  allowedValues?: string[];
-  minDate?: string;
-  maxDate?: string;
-  precision?: number;
-}
-
-// Field Option Interface
-export interface FieldOption {
-  value: string;
-  label: string;
-  description?: string;
-  icon?: React.ReactNode;
-}
-
-// Test Result Interface
 export interface TestResult {
   success: boolean;
   message: string;
@@ -204,7 +156,6 @@ export interface TestResult {
   serverInfo?: any;
 }
 
-// Ledger Item Interface
 export interface LedgerItem {
   name: string;
   account_name: string;

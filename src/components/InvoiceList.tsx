@@ -11,21 +11,26 @@ import {
   Checkbox,
   Button,
   Typography,
-  CircularProgress,
   ToggleButtonGroup,
   ToggleButton,
   Alert,
   IconButton,
   Tooltip,
+  Container,
 } from '@mui/material';
-import { Refresh, Payment, Receipt } from '@mui/icons-material';
+import { Refresh, Payment, Receipt, CreditCard } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useInvoices } from '../hooks/useInvoices';
 import { formatCurrency } from '../utils/formatters';
+import DashboardStats from './DashboardStats';
+import LoadingSkeleton from './LoadingSkeleton';
+import PaymentGateway from './payments/PaymentGateway';
 
 const InvoiceList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Unpaid' | 'Overdue'>('All');
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  const [paymentInvoice, setPaymentInvoice] = useState<any>(null);
+  const [showPaymentGateway, setShowPaymentGateway] = useState(false);
   
   const { 
     invoices, 
@@ -70,6 +75,29 @@ const InvoiceList: React.FC = () => {
     }
   };
 
+  const handlePaymentClick = (invoice: any) => {
+    setPaymentInvoice(invoice);
+    setShowPaymentGateway(true);
+  };
+
+  const handlePaymentSuccess = (paymentData: any) => {
+    console.log('Payment successful:', paymentData);
+    setShowPaymentGateway(false);
+    setPaymentInvoice(null);
+    refetch(); // Refresh the invoice list
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment error:', error);
+    setShowPaymentGateway(false);
+    setPaymentInvoice(null);
+  };
+
+  const handleClosePaymentGateway = () => {
+    setShowPaymentGateway(false);
+    setPaymentInvoice(null);
+  };
+
   const handleStatusFilter = (
     event: React.MouseEvent<HTMLElement>,
     newFilter: 'All' | 'Unpaid' | 'Overdue' | null
@@ -87,9 +115,12 @@ const InvoiceList: React.FC = () => {
 
   if (isLoading && invoices.length === 0) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
-      </Box>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <DashboardStats />
+        <Box sx={{ mt: 4 }}>
+          <LoadingSkeleton variant="table" count={5} />
+        </Box>
+      </Container>
     );
   }
 
@@ -102,11 +133,14 @@ const InvoiceList: React.FC = () => {
   }
 
   return (
-    <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h2">
-          Invoices
-        </Typography>
+    <Container maxWidth="xl" sx={{ py: 3 }}>
+      <DashboardStats />
+      
+      <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mt: 4 }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+          <Typography variant="h5" component="h2">
+            Invoices
+          </Typography>
         <Box display="flex" gap={1}>
           <Tooltip title="Refresh">
             <IconButton onClick={refreshData} disabled={isLoading}>
@@ -166,12 +200,13 @@ const InvoiceList: React.FC = () => {
               <TableCell align="right">Amount</TableCell>
               <TableCell align="right">Outstanding</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {invoices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                   <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
                     <Receipt color="action" fontSize="large" />
                     <Typography color="textSecondary">
@@ -227,6 +262,26 @@ const InvoiceList: React.FC = () => {
                       {invoice.status}
                     </Box>
                   </TableCell>
+                  <TableCell>
+                    <Box display="flex" gap={1}>
+                      {!invoice.is_paid && (
+                        <Tooltip title="Process Payment">
+                          <IconButton
+                            size="small"
+                            onClick={() => handlePaymentClick(invoice)}
+                            color="primary"
+                          >
+                            <CreditCard />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="View Details">
+                        <IconButton size="small">
+                          <Receipt />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -234,6 +289,19 @@ const InvoiceList: React.FC = () => {
         </Table>
       </TableContainer>
     </Paper>
+
+    {/* Payment Gateway Dialog */}
+    {showPaymentGateway && paymentInvoice && (
+      <PaymentGateway
+        invoiceId={paymentInvoice.name}
+        amount={paymentInvoice.outstanding_amount}
+        currency="USD"
+        onPaymentSuccess={handlePaymentSuccess}
+        onPaymentError={handlePaymentError}
+        onClose={handleClosePaymentGateway}
+      />
+    )}
+    </Container>
   );
 };
 

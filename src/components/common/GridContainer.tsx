@@ -1,5 +1,5 @@
 import React from 'react';
-import MuiGrid, { GridProps as MuiGridProps, GridSize } from '@mui/material/Grid';
+import MuiGrid, { GridSize } from '@mui/material/Grid';
 
 // Define the props that our GridContainer will accept
 type GridContainerProps = {

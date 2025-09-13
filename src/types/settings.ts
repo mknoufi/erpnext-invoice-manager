@@ -1,3 +1,5 @@
+import type { ErpNextSettings as BaseErpNextSettings } from './erpnext-settings';
+
 export interface ThemeSettings {
   mode: 'light' | 'dark' | 'system';
   primaryColor: string;
@@ -7,9 +9,7 @@ export interface ThemeSettings {
   spacing: number;
 }
 
-import { ErpNextSettingsBase } from './erpnext';
-
-export interface ErpNextSettings extends Omit<ErpNextSettingsBase, 'defaultLedgers'> {
+export interface ErpNextSettings extends Omit<BaseErpNextSettings, 'defaultLedgers'> {
   /**
    * List of default ledger accounts to use for transactions
    * @example ['Debtors - ACME', 'Sales - ACME']
