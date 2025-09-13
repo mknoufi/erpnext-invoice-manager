@@ -1,4 +1,4 @@
-import apiClient from './client';
+import apiClient, { apiWithRetry, ApiError } from './client';
 import type {
   CashierSession,
   InvoiceSummary,
@@ -10,11 +10,59 @@ import type {
 } from '../types/pos';
 import { fetchPaymentModes, fetchLedgerAccounts, fetchCurrencies, createPaymentEntry, createJournalEntry } from './erpnextSettingsService';
 
+// Enhanced error handling for POS operations
+export class PosServiceError extends Error {
+  constructor(
+    message: string,
+    public originalError?: Error,
+    public operation?: string,
+    public retryable: boolean = false
+  ) {
+    super(message);
+    this.name = 'PosServiceError';
+  }
+}
+
+// Service configuration
+const POS_SERVICE_CONFIG = {
+  logErrors: true,
+  retryFailedOperations: true,
+  maxRetries: 3,
+  retryDelay: 1000,
+};
+
 const posService = {
   // Session & PIN
   async loginWithPin(pin: string): Promise<CashierSession> {
-    const { data } = await apiClient.post('/pos/session/pin-login', { pin });
-    return data;
+    try {
+      const { data } = await apiWithRetry.post('/pos/session/pin-login', { pin });
+      
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.log('Successfully logged in with PIN');
+      }
+      
+      return data;
+    } catch (error) {
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.error('Error during PIN login:', error);
+      }
+
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          throw new PosServiceError('Invalid PIN. Please check your PIN and try again.', error, 'loginWithPin');
+        } else if (error.status === 403) {
+          throw new PosServiceError('Access denied. Please contact your administrator.', error, 'loginWithPin');
+        } else if (error.status >= 500) {
+          throw new PosServiceError('Server error during login. Please try again later.', error, 'loginWithPin', true);
+        }
+      }
+
+      throw new PosServiceError(
+        'Failed to login with PIN',
+        error instanceof Error ? error : new Error(String(error)),
+        'loginWithPin'
+      );
+    }
   },
   async closeSession(sessionId: string): Promise<{ success: boolean }> {
     const { data } = await apiClient.post(`/pos/session/${sessionId}/close`);
@@ -49,8 +97,48 @@ const posService = {
 
   // Payments
   async recordPayment(entry: Omit<PaymentEntry, 'id' | 'createdAt'>): Promise<PaymentEntry> {
-    const { data } = await apiClient.post('/pos/payments', entry);
-    return data;
+    try {
+      const { data } = await apiWithRetry.post('/pos/payments', entry);
+      
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.log(`Successfully recorded payment for invoice ${entry.invoiceId}`);
+      }
+      
+      return data;
+    } catch (error) {
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.error('Error recording payment:', error);
+      }
+
+      if (error instanceof ApiError) {
+        if (error.status === 400) {
+          throw new PosServiceError(
+            'Invalid payment data. Please check the payment details and try again.',
+            error,
+            'recordPayment'
+          );
+        } else if (error.status === 404) {
+          throw new PosServiceError(
+            `Invoice ${entry.invoiceId} not found.`,
+            error,
+            'recordPayment'
+          );
+        } else if (error.status >= 500) {
+          throw new PosServiceError(
+            'Server error while recording payment. Please try again later.',
+            error,
+            'recordPayment',
+            true
+          );
+        }
+      }
+
+      throw new PosServiceError(
+        'Failed to record payment',
+        error instanceof Error ? error : new Error(String(error)),
+        'recordPayment'
+      );
+    }
   },
   async listPayments(params?: { sessionId?: string }): Promise<PaymentEntry[]> {
     const { data } = await apiClient.get('/pos/payments', { params });
@@ -106,10 +194,37 @@ const posService = {
         fetchCurrencies()
       ]);
       
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.log('Successfully fetched ERPNext settings');
+      }
+      
       return { paymentModes, ledgerAccounts, currencies };
     } catch (error) {
-      console.error('Error fetching ERPNext settings:', error);
-      throw new Error('Failed to fetch ERPNext settings');
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.error('Error fetching ERPNext settings:', error);
+      }
+
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          throw new PosServiceError(
+            'Authentication failed. Please check your ERPNext credentials.',
+            error,
+            'getERPNexSettings'
+          );
+        } else if (error.status === 403) {
+          throw new PosServiceError(
+            'Permission denied. Please check your ERPNext permissions.',
+            error,
+            'getERPNexSettings'
+          );
+        }
+      }
+
+      throw new PosServiceError(
+        'Failed to fetch ERPNext settings',
+        error instanceof Error ? error : new Error(String(error)),
+        'getERPNexSettings'
+      );
     }
   },
 
@@ -134,10 +249,45 @@ const posService = {
       };
 
       const result = await createPaymentEntry(paymentData);
+      
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.log(`Successfully synced payment ${payment.id} to ERPNext`);
+      }
+      
       return { success: true, entryId: result.name };
     } catch (error) {
-      console.error('Error in reverse sync payment:', error);
-      throw new Error('Failed to sync payment to ERPNext');
+      if (POS_SERVICE_CONFIG.logErrors) {
+        console.error('Error in reverse sync payment:', error);
+      }
+
+      if (error instanceof ApiError) {
+        if (error.status === 400) {
+          throw new PosServiceError(
+            'Invalid payment data for ERPNext sync. Please check the payment details.',
+            error,
+            'reverseSyncPayment'
+          );
+        } else if (error.status === 404) {
+          throw new PosServiceError(
+            `Referenced invoice ${payment.invoiceId} not found in ERPNext.`,
+            error,
+            'reverseSyncPayment'
+          );
+        } else if (error.status >= 500) {
+          throw new PosServiceError(
+            'ERPNext server error during payment sync. Please try again later.',
+            error,
+            'reverseSyncPayment',
+            true
+          );
+        }
+      }
+
+      throw new PosServiceError(
+        'Failed to sync payment to ERPNext',
+        error instanceof Error ? error : new Error(String(error)),
+        'reverseSyncPayment'
+      );
     }
   },
 

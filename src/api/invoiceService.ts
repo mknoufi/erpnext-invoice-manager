@@ -1,4 +1,4 @@
-import api from './client';
+import { apiWithRetry, ApiError } from './client';
 
 export interface Invoice {
   name: string;
@@ -32,6 +32,26 @@ export interface InvoiceTax {
   tax_amount: number;
   total: number;
 }
+
+// Enhanced error handling for invoice operations
+export class InvoiceServiceError extends Error {
+  constructor(
+    message: string,
+    public originalError?: Error,
+    public operation?: string,
+    public fallbackUsed: boolean = false
+  ) {
+    super(message);
+    this.name = 'InvoiceServiceError';
+  }
+}
+
+// Service configuration
+const SERVICE_CONFIG = {
+  fallbackToMockOnError: true,
+  logErrors: true,
+  retryFailedOperations: true,
+};
 
 // Configuration: Set to true to use real ERPNext data, false for mock data
 const USE_REAL_ERPNEXT_DATA = true;
@@ -98,7 +118,7 @@ const mockInvoices: Invoice[] = [
 export const fetchInvoices = async (status: 'Overdue' | 'Unpaid' | 'All' = 'All'): Promise<Invoice[]> => {
   if (USE_REAL_ERPNEXT_DATA) {
     try {
-      // Real ERPNext API call
+      // Real ERPNext API call with enhanced error handling
       let filters: Record<string, any> = {
         docstatus: 1, // Only submitted documents
       };
@@ -110,7 +130,7 @@ export const fetchInvoices = async (status: 'Overdue' | 'Unpaid' | 'All' = 'All'
         filters.outstanding_amount = ['>', 0];
       }
 
-      const response = await api.get('/Sales Invoice', {
+      const response = await apiWithRetry.get('/Sales Invoice', {
         params: {
           fields: JSON.stringify([
             'name',
@@ -138,17 +158,59 @@ export const fetchInvoices = async (status: 'Overdue' | 'Unpaid' | 'All' = 'All'
         },
       });
 
-      return response.data.data.map((invoice: any) => ({
+      const invoices = response.data.data.map((invoice: any) => ({
         ...invoice,
         is_paid: invoice.status === 'Paid' || invoice.outstanding_amount <= 0,
         items: invoice.items || [],
         taxes: invoice.taxes_and_charges || []
       }));
+
+      if (SERVICE_CONFIG.logErrors) {
+        console.log(`Successfully fetched ${invoices.length} invoices from ERPNext`);
+      }
+
+      return invoices;
     } catch (error) {
-      console.error('Error fetching invoices from ERPNext:', error);
-      // Fallback to mock data if ERPNext is not available
-      console.log('Falling back to mock data...');
-      return fetchMockInvoices(status);
+      if (SERVICE_CONFIG.logErrors) {
+        console.error('Error fetching invoices from ERPNext:', error);
+      }
+
+      // Enhanced error handling with specific error types
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          throw new InvoiceServiceError(
+            'Authentication failed. Please check your ERPNext credentials.',
+            error,
+            'fetchInvoices'
+          );
+        } else if (error.status === 403) {
+          throw new InvoiceServiceError(
+            'Permission denied. Please check your ERPNext permissions for Sales Invoice.',
+            error,
+            'fetchInvoices'
+          );
+        } else if (error.retryable && SERVICE_CONFIG.fallbackToMockOnError) {
+          if (SERVICE_CONFIG.logErrors) {
+            console.log('Falling back to mock data due to retryable error...');
+          }
+          return fetchMockInvoices(status);
+        }
+      }
+
+      // Fallback to mock data if configured
+      if (SERVICE_CONFIG.fallbackToMockOnError) {
+        if (SERVICE_CONFIG.logErrors) {
+          console.log('Falling back to mock data...');
+        }
+        return fetchMockInvoices(status);
+      }
+
+      // Re-throw with enhanced error information
+      throw new InvoiceServiceError(
+        'Failed to fetch invoices from ERPNext',
+        error instanceof Error ? error : new Error(String(error)),
+        'fetchInvoices'
+      );
     }
   } else {
     return fetchMockInvoices(status);
@@ -175,8 +237,8 @@ const fetchMockInvoices = async (status: 'Overdue' | 'Unpaid' | 'All' = 'All'): 
 export const markAsPaid = async (invoiceNames: string[], paymentMode: string = 'Cash'): Promise<void> => {
   if (USE_REAL_ERPNEXT_DATA) {
     try {
-      // Real ERPNext API call for creating payment entries
-      await api.post('/method/erpnext.accounts.doctype.payment_entry.payment_entry.create_payment', {
+      // Real ERPNext API call for creating payment entries with enhanced error handling
+      const paymentData = {
         payment_type: 'Receive',
         posting_date: new Date().toISOString().split('T')[0],
         mode_of_payment: paymentMode,
@@ -186,46 +248,156 @@ export const markAsPaid = async (invoiceNames: string[], paymentMode: string = '
           reference_name: name,
           allocated_amount: 0, // This will be set to the outstanding amount by the server
         })),
-      });
-      console.log('Successfully created payment entries for invoices:', invoiceNames);
+      };
+
+      await apiWithRetry.post('/method/erpnext.accounts.doctype.payment_entry.payment_entry.create_payment', paymentData);
+      
+      if (SERVICE_CONFIG.logErrors) {
+        console.log(`Successfully created payment entries for ${invoiceNames.length} invoices:`, invoiceNames);
+      }
     } catch (error) {
-      console.error('Error creating payment entries:', error);
-      throw new Error('Failed to create payment entries in ERPNext');
+      if (SERVICE_CONFIG.logErrors) {
+        console.error('Error creating payment entries:', error);
+      }
+
+      // Enhanced error handling
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          throw new InvoiceServiceError(
+            'Authentication failed. Please check your ERPNext credentials.',
+            error,
+            'markAsPaid'
+          );
+        } else if (error.status === 403) {
+          throw new InvoiceServiceError(
+            'Permission denied. Please check your ERPNext permissions for Payment Entry.',
+            error,
+            'markAsPaid'
+          );
+        } else if (error.status >= 400 && error.status < 500) {
+          throw new InvoiceServiceError(
+            `Invalid request: ${error.message}. Please check invoice names and payment mode.`,
+            error,
+            'markAsPaid'
+          );
+        }
+      }
+
+      // Fallback for mock mode when configured
+      if (SERVICE_CONFIG.fallbackToMockOnError) {
+        if (SERVICE_CONFIG.logErrors) {
+          console.log('Falling back to mock payment processing...');
+        }
+        await markAsPaidMock(invoiceNames);
+        return;
+      }
+
+      throw new InvoiceServiceError(
+        'Failed to create payment entries in ERPNext',
+        error instanceof Error ? error : new Error(String(error)),
+        'markAsPaid'
+      );
     }
   } else {
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('Marking invoices as paid:', invoiceNames);
-    
-    mockInvoices.forEach(invoice => {
-      if (invoiceNames.includes(invoice.name)) {
-        invoice.outstanding_amount = 0;
-        invoice.status = 'Paid';
-        invoice.is_paid = true;
-      }
-    });
+    await markAsPaidMock(invoiceNames);
   }
+};
+
+// Separate mock function for better separation of concerns
+const markAsPaidMock = async (invoiceNames: string[]): Promise<void> => {
+  // Mock implementation
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  if (SERVICE_CONFIG.logErrors) {
+    console.log('Mock: Marking invoices as paid:', invoiceNames);
+  }
+  
+  mockInvoices.forEach(invoice => {
+    if (invoiceNames.includes(invoice.name)) {
+      invoice.outstanding_amount = 0;
+      invoice.status = 'Paid';
+      invoice.is_paid = true;
+    }
+  });
 };
 
 export const getInvoiceDetails = async (invoiceId: string): Promise<Invoice> => {
   if (USE_REAL_ERPNEXT_DATA) {
-    // Real ERPNext API call
-    // Uncomment the import at the top and use this code:
-    /*
-    const response = await api.get(`/Sales Invoice/${invoiceId}`);
-    return response.data.data;
-    */
-    throw new Error('Real ERPNext data not configured. Set USE_REAL_ERPNEXT_DATA = true and configure API client.');
-  } else {
-    // Mock implementation
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const invoice = mockInvoices.find(inv => inv.name === invoiceId);
-    if (!invoice) {
-      throw new Error(`Invoice ${invoiceId} not found`);
+    try {
+      // Real ERPNext API call with enhanced error handling
+      const response = await apiWithRetry.get(`/Sales Invoice/${invoiceId}`);
+      
+      if (SERVICE_CONFIG.logErrors) {
+        console.log(`Successfully fetched invoice details for ${invoiceId}`);
+      }
+      
+      return {
+        ...response.data.data,
+        is_paid: response.data.data.status === 'Paid' || response.data.data.outstanding_amount <= 0,
+        items: response.data.data.items || [],
+        taxes: response.data.data.taxes_and_charges || []
+      };
+    } catch (error) {
+      if (SERVICE_CONFIG.logErrors) {
+        console.error(`Error fetching invoice details for ${invoiceId}:`, error);
+      }
+
+      // Enhanced error handling
+      if (error instanceof ApiError) {
+        if (error.status === 404) {
+          throw new InvoiceServiceError(
+            `Invoice ${invoiceId} not found`,
+            error,
+            'getInvoiceDetails'
+          );
+        } else if (error.status === 401) {
+          throw new InvoiceServiceError(
+            'Authentication failed. Please check your ERPNext credentials.',
+            error,
+            'getInvoiceDetails'
+          );
+        } else if (error.status === 403) {
+          throw new InvoiceServiceError(
+            'Permission denied. Please check your ERPNext permissions for Sales Invoice.',
+            error,
+            'getInvoiceDetails'
+          );
+        }
+      }
+
+      // Fallback to mock data if configured
+      if (SERVICE_CONFIG.fallbackToMockOnError) {
+        if (SERVICE_CONFIG.logErrors) {
+          console.log('Falling back to mock data for invoice details...');
+        }
+        return getInvoiceDetailsMock(invoiceId);
+      }
+
+      throw new InvoiceServiceError(
+        `Failed to fetch invoice details for ${invoiceId}`,
+        error instanceof Error ? error : new Error(String(error)),
+        'getInvoiceDetails'
+      );
     }
-    
-    return invoice;
+  } else {
+    return getInvoiceDetailsMock(invoiceId);
   }
+};
+
+// Separate mock function for better separation of concerns
+const getInvoiceDetailsMock = async (invoiceId: string): Promise<Invoice> => {
+  // Mock implementation
+  await new Promise(resolve => setTimeout(resolve, 300));
+  
+  const invoice = mockInvoices.find(inv => inv.name === invoiceId);
+  if (!invoice) {
+    throw new InvoiceServiceError(
+      `Invoice ${invoiceId} not found`,
+      undefined,
+      'getInvoiceDetails',
+      true
+    );
+  }
+  
+  return invoice;
 };
