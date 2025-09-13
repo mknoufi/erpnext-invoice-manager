@@ -12,7 +12,6 @@ import {
   Select,
   MenuItem,
   Chip,
-  IconButton,
   Alert,
   Divider,
 } from '@mui/material';
@@ -21,7 +20,7 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { CashCounterSettings as CashCounterSettingsType } from '../../types/cashier';
 import logger from '../../utils/logger';
 
-const CASH_COUNTER_SETTINGS_KEY = 'cash_counter_settings';
+// const CASH_COUNTER_SETTINGS_KEY = 'cash_counter_settings';
 
 const DEFAULT_SETTINGS: CashCounterSettingsType = {
   currency: 'INR',

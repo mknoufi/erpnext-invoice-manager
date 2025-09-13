@@ -29,7 +29,7 @@ const TwoFactorAuthSetup: React.FC<TwoFactorAuthSetupProps> = ({ open, onClose }
   const [error, setError] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   
-  const { state: _state } = useSecurity();
+  useSecurity();
 
   // Initialize 2FA setup
   useEffect(() => {
