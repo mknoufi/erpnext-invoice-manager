@@ -1,4 +1,5 @@
 import type { ErpNextSettings as BaseErpNextSettings } from './erpnext-settings';
+import type { CashCounterSettings } from './cashier';
 
 export interface ThemeSettings {
   mode: 'light' | 'dark' | 'system';
@@ -73,6 +74,9 @@ export interface AppSettings {
   
   /** Last upgrade timestamp */
   lastUpgraded?: string;
+  
+  /** Cash counter settings */
+  cashCounter?: CashCounterSettings;
   
   /** Additional metadata */
   [key: string]: any;

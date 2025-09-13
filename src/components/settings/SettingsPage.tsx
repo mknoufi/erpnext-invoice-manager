@@ -9,13 +9,14 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { Settings as SettingsIcon, Cloud, Palette, Tune, Security, Extension, Payment } from '@mui/icons-material';
+import { Settings as SettingsIcon, Cloud, Palette, Tune, Security, Extension, Payment, AccountBalance } from '@mui/icons-material';
 import { useSettings } from '../../contexts/SettingsContext';
 import ErpNextSettings from './ErpNextSettings';
 import ThemeSettings from './ThemeSettings';
 import UISettings from './UISettings';
 import FeatureSettings from './FeatureSettings';
 import PaymentSettings from '../payments/PaymentSettings';
+import { CashCounterSettings } from './CashCounterSettings';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -132,6 +133,13 @@ const SettingsPage: React.FC = () => {
           {...a11yProps(5)} 
           sx={{ justifyContent: 'flex-start' }}
         />
+        <Tab 
+          icon={<AccountBalance />} 
+          iconPosition="start" 
+          label="Cash Counter" 
+          {...a11yProps(6)} 
+          sx={{ justifyContent: 'flex-start' }}
+        />
       </Tabs>
 
       <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
@@ -164,6 +172,10 @@ const SettingsPage: React.FC = () => {
 
         <TabPanel value={value} index={5}>
           <PaymentSettings onSave={(settings) => console.log('Payment settings saved:', settings)} />
+        </TabPanel>
+
+        <TabPanel value={value} index={6}>
+          <CashCounterSettings />
         </TabPanel>
       </Box>
     </Paper>
