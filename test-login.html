@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #1565c0;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 ERPNext Invoice Manager - Login Test</h1>
+    
+    <div class="test-section">
+        <h2>📋 Test Instructions</h2>
+        <p><strong>Application URL:</strong> <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></p>
+        
+        <h3>🔐 Login Credentials:</h3>
+        <ul>
+            <li><strong>Email:</strong> admin@example.com</li>
+            <li><strong>Password:</strong> admin123</li>
+        </ul>
+        
+        <h3>🎯 Cashier Login:</h3>
+        <ul>
+            <li><strong>URL:</strong> <a href="http://localhost:3000/cashier-login" target="_blank">http://localhost:3000/cashier-login</a></li>
+            <li><strong>Cashier PIN:</strong> 1234</li>
+            <li><strong>Manager PIN:</strong> 9999</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Test Results</h2>
+        <button class="test-button" onclick="testServerConnection()">Test Server Connection</button>
+        <button class="test-button" onclick="testLoginPage()">Test Login Page</button>
+        <button class="test-button" onclick="testCashierLogin()">Test Cashier Login</button>
+        <button class="test-button" onclick="testAllFeatures()">Test All Features</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📱 Feature URLs</h2>
+        <ul>
+            <li><a href="http://localhost:3000" target="_blank">🏠 Main Dashboard</a></li>
+            <li><a href="http://localhost:3000/settings" target="_blank">⚙️ Settings</a></li>
+            <li><a href="http://localhost:3000/cashier-login" target="_blank">💰 Cashier Login</a></li>
+            <li><a href="http://localhost:3000/cashier" target="_blank">📊 Cashier Dashboard</a></li>
+        </ul>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            results.appendChild(div);
+        }
+
+        async function testServerConnection() {
+            try {
+                const response = await fetch('http://localhost:3000');
+                if (response.ok) {
+                    addResult('✅ Server is running and responding correctly', 'success');
+                } else {
+                    addResult(`❌ Server responded with status: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Server connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLoginPage() {
+            try {
+                const response = await fetch('http://localhost:3000/login');
+                if (response.ok) {
+                    addResult('✅ Login page is accessible', 'success');
+                    addResult('📝 Manual test: Go to http://localhost:3000 and try logging in with admin@example.com / admin123', 'info');
+                } else {
+                    addResult(`❌ Login page returned status: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Login page test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCashierLogin() {
+            try {
+                const response = await fetch('http://localhost:3000/cashier-login');
+                if (response.ok) {
+                    addResult('✅ Cashier login page is accessible', 'success');
+                    addResult('📝 Manual test: Go to http://localhost:3000/cashier-login and try PIN: 1234', 'info');
+                } else {
+                    addResult(`❌ Cashier login page returned status: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Cashier login test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAllFeatures() {
+            addResult('🚀 Starting comprehensive test...', 'info');
+            
+            // Test server
+            await testServerConnection();
+            
+            // Test main pages
+            await testLoginPage();
+            await testCashierLogin();
+            
+            // Test other important pages
+            const pages = [
+                { url: '/settings', name: 'Settings' },
+                { url: '/cashier', name: 'Cashier Dashboard' }
+            ];
+            
+            for (const page of pages) {
+                try {
+                    const response = await fetch(`http://localhost:3000${page.url}`);
+                    if (response.ok) {
+                        addResult(`✅ ${page.name} page is accessible`, 'success');
+                    } else {
+                        addResult(`❌ ${page.name} page returned status: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    addResult(`❌ ${page.name} page test failed: ${error.message}`, 'error');
+                }
+            }
+            
+            addResult('🎉 Test completed! Check the results above.', 'info');
+        }
+
+        // Auto-run basic test on page load
+        window.onload = function() {
+            addResult('🔧 Login test page loaded. Click buttons above to run tests.', 'info');
+        };
+    </script>
+</body>
+</html>
