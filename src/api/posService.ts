@@ -1,4 +1,4 @@
-import apiClient from './client';
+import { apiWithRetry } from './client';
 import type {
   CashierSession,
   InvoiceSummary,
@@ -13,25 +13,25 @@ import { fetchPaymentModes, fetchLedgerAccounts, fetchCurrencies, createPaymentE
 const posService = {
   // Session & PIN
   async loginWithPin(pin: string): Promise<CashierSession> {
-    const { data } = await apiClient.post('/pos/session/pin-login', { pin });
+    const { data } = await apiWithRetry.post('/pos/session/pin-login', { pin });
     return data;
   },
   async closeSession(sessionId: string): Promise<{ success: boolean }> {
-    const { data } = await apiClient.post(`/pos/session/${sessionId}/close`);
+    const { data } = await apiWithRetry.post(`/pos/session/${sessionId}/close`);
     return data;
   },
 
   // Invoices
   async listTodayInvoices(params?: { search?: string }): Promise<InvoiceSummary[]> {
-    const { data } = await apiClient.get('/pos/invoices/today', { params });
+    const { data } = await apiWithRetry.get('/pos/invoices/today', { params });
     return data;
   },
   async listPendingDeliveries(params?: { search?: string }): Promise<InvoiceSummary[]> {
-    const { data } = await apiClient.get('/pos/invoices/pending-delivery', { params });
+    const { data } = await apiWithRetry.get('/pos/invoices/pending-delivery', { params });
     return data;
   },
   async searchPendingCredit(params: { query: string }): Promise<InvoiceSummary[]> {
-    const { data } = await apiClient.get('/pos/invoices/pending-credit', { params });
+    const { data } = await apiWithRetry.get('/pos/invoices/pending-credit', { params });
     return data;
   },
 
@@ -39,57 +39,57 @@ const posService = {
   async applyBulkDiscount(invoiceIds: string[], totalDiscount: number): Promise<{
     updated: InvoiceSummary[];
   }> {
-    const { data } = await apiClient.post('/pos/discounts/bulk', { invoiceIds, totalDiscount });
+    const { data } = await apiWithRetry.post('/pos/discounts/bulk', { invoiceIds, totalDiscount });
     return data;
   },
   async requestManagerApproval(payload: Omit<ManagerApprovalRequest, 'status' | 'createdAt' | 'requestId'>): Promise<ManagerApprovalRequest> {
-    const { data } = await apiClient.post('/pos/approvals/request', payload);
+    const { data } = await apiWithRetry.post('/pos/approvals/request', payload);
     return data;
   },
 
   // Payments
   async recordPayment(entry: Omit<PaymentEntry, 'id' | 'createdAt'>): Promise<PaymentEntry> {
-    const { data } = await apiClient.post('/pos/payments', entry);
+    const { data } = await apiWithRetry.post('/pos/payments', entry);
     return data;
   },
   async listPayments(params?: { sessionId?: string }): Promise<PaymentEntry[]> {
-    const { data } = await apiClient.get('/pos/payments', { params });
+    const { data } = await apiWithRetry.get('/pos/payments', { params });
     return data;
   },
 
   // Payouts
   async recordPayout(entry: Omit<PayoutEntry, 'id' | 'createdAt'>): Promise<PayoutEntry> {
-    const { data } = await apiClient.post('/pos/payouts', entry);
+    const { data } = await apiWithRetry.post('/pos/payouts', entry);
     return data;
   },
   async listPayouts(params?: { sessionId?: string }): Promise<PayoutEntry[]> {
-    const { data } = await apiClient.get('/pos/payouts', { params });
+    const { data } = await apiWithRetry.get('/pos/payouts', { params });
     return data;
   },
 
   // Cash counting
   async updateCashInHand(payload: Omit<CashInHand, 'total' | 'variance'> & { sessionId: string }): Promise<CashInHand> {
-    const { data } = await apiClient.post('/pos/cash-in-hand', payload);
+    const { data } = await apiWithRetry.post('/pos/cash-in-hand', payload);
     return data;
   },
   async getCashInHand(sessionId: string): Promise<CashInHand> {
-    const { data } = await apiClient.get(`/pos/cash-in-hand/${sessionId}`);
+    const { data } = await apiWithRetry.get(`/pos/cash-in-hand/${sessionId}`);
     return data;
   },
 
   // EOD
   async generateEOD(sessionId: string, options?: { shareWith?: string[] }): Promise<EODReport> {
-    const { data } = await apiClient.post(`/pos/eod/${sessionId}`, options || {});
+    const { data } = await apiWithRetry.post(`/pos/eod/${sessionId}`, options || {});
     return data;
   },
 
   // Sync hooks (polling endpoints)
   async syncInvoices(since?: string): Promise<{ invoices: InvoiceSummary[]; nextCursor?: string }> {
-    const { data } = await apiClient.get('/pos/sync/invoices', { params: { since } });
+    const { data } = await apiWithRetry.get('/pos/sync/invoices', { params: { since } });
     return data;
   },
   async syncPayments(since?: string): Promise<{ payments: PaymentEntry[]; nextCursor?: string }> {
-    const { data } = await apiClient.get('/pos/sync/payments', { params: { since } });
+    const { data } = await apiWithRetry.get('/pos/sync/payments', { params: { since } });
     return data;
   },
 

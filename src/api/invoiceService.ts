@@ -1,4 +1,4 @@
-import api from './client';
+import { apiWithRetry } from './client';
 
 export interface Invoice {
   name: string;
@@ -110,7 +110,7 @@ export const fetchInvoices = async (status: 'Overdue' | 'Unpaid' | 'All' = 'All'
         filters.outstanding_amount = ['>', 0];
       }
 
-      const response = await api.get('/Sales Invoice', {
+      const response = await apiWithRetry.get('/Sales Invoice', {
         params: {
           fields: JSON.stringify([
             'name',
@@ -176,7 +176,7 @@ export const markAsPaid = async (invoiceNames: string[], paymentMode: string = '
   if (USE_REAL_ERPNEXT_DATA) {
     try {
       // Real ERPNext API call for creating payment entries
-      await api.post('/method/erpnext.accounts.doctype.payment_entry.payment_entry.create_payment', {
+      await apiWithRetry.post('/method/erpnext.accounts.doctype.payment_entry.payment_entry.create_payment', {
         payment_type: 'Receive',
         posting_date: new Date().toISOString().split('T')[0],
         mode_of_payment: paymentMode,

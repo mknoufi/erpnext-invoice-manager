@@ -17,5 +17,23 @@ module.exports = {
     '!src/**/*.d.ts',
     '!src/index.tsx',
     '!src/setupTests.ts'
-  ]
+  ],
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
+      presets: [
+        ['@babel/preset-env', { modules: 'auto' }],
+        ['@babel/preset-react', { runtime: 'automatic' }],
+        '@babel/preset-typescript'
+      ]
+    }]
+  },
+  transformIgnorePatterns: [
+    'node_modules/(?!(axios|@tanstack/react-query|socket.io-client)/)'
+  ],
+  extensionsToTreatAsEsm: [],
+  globals: {
+    'ts-jest': {
+      useESM: false
+    }
+  }
 };

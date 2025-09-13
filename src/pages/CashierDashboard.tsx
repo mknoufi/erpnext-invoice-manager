@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Box, Grid, Paper, Typography, TextField, Tabs, Tab, Button, Snackbar, Alert, Checkbox, FormControlLabel } from '@mui/material';
 import { useCashier } from '../contexts/CashierContext';
 import { useSettings } from '../contexts/SettingsContext';
 import posService from '../api/posService';
 import { subscribeToDocType } from '../api/socket';
-import type { InvoiceSummary } from '../types/pos';
 import BulkDiscountDialog from '../components/pos/BulkDiscountDialog';
 import ManagerApprovalDialog from '../components/pos/ManagerApprovalDialog';
 import PaymentModal from '../components/pos/PaymentModal';
@@ -12,36 +11,32 @@ import PayoutModal from '../components/pos/PayoutModal';
 import CashCollectionModal from '../components/pos/CashCollectionModal';
 import CashInHandDialog from '../components/pos/CashInHandDialog';
 import EODDialog from '../components/pos/EODDialog';
+import { useCashierDashboard } from './cashierDashboardReducer';
 
 const CashierDashboard: React.FC = () => {
-  const { state } = useCashier();
+  const { state: cashierState } = useCashier();
   const { settings } = useSettings();
-  const [tab, setTab] = useState(0);
-  const [search, setSearch] = useState('');
-  const [todayInvoices, setTodayInvoices] = useState<InvoiceSummary[]>([]);
-  const [pendingDeliveries, setPendingDeliveries] = useState<InvoiceSummary[]>([]);
-  const [showDiscount, setShowDiscount] = useState(false);
-  const [showApproval, setShowApproval] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [showPayout, setShowPayout] = useState(false);
-  const [showCashCollection, setShowCashCollection] = useState(false);
-  const [showCashCount, setShowCashCount] = useState(false);
-  const [showEOD, setShowEOD] = useState(false);
-  const [selectedInvoices, setSelectedInvoices] = useState<InvoiceSummary[]>([]);
-  const [toast, setToast] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' | 'warning' }>({ open: false, message: '', severity: 'success' });
+  const { state, actions } = useCashierDashboard();
 
   const loadData = useCallback(async () => {
     try {
+      actions.setLoading('data', true);
       const [inv, del] = await Promise.all([
-        posService.listTodayInvoices({ search }),
-        posService.listPendingDeliveries({ search }),
+        posService.listTodayInvoices({ search: state.search }),
+        posService.listPendingDeliveries({ search: state.search }),
       ]);
-      setTodayInvoices(inv);
-      setPendingDeliveries(del);
+      actions.setTodayInvoices(inv);
+      actions.setPendingDeliveries(del);
     } catch (error) {
       console.error('Error loading data:', error);
+      actions.showToast({
+        message: 'Failed to load data',
+        severity: 'error'
+      });
+    } finally {
+      actions.setLoading('data', false);
     }
-  }, [search]);
+  }, [state.search, actions]);
 
   useEffect(() => {
     loadData();
@@ -50,16 +45,16 @@ const CashierDashboard: React.FC = () => {
   useEffect(() => {
     // Realtime: refresh lists when ERPNext pushes updates
     const offInv = subscribeToDocType('Sales Invoice', () => {
-      posService.listTodayInvoices({ search }).then(setTodayInvoices).catch(() => {});
+      posService.listTodayInvoices({ search: state.search }).then(actions.setTodayInvoices).catch(() => {});
     });
     const offDel = subscribeToDocType('Delivery Note', () => {
-      posService.listPendingDeliveries({ search }).then(setPendingDeliveries).catch(() => {});
+      posService.listPendingDeliveries({ search: state.search }).then(actions.setPendingDeliveries).catch(() => {});
     });
     return () => {
       offInv();
       offDel();
     };
-  }, [search]);
+  }, [state.search, actions]);
 
   return (
     <>
@@ -68,7 +63,7 @@ const CashierDashboard: React.FC = () => {
         Cashier Dashboard
       </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        Session: {state.session?.sessionId || '-'} • Cashier: {state.session?.cashier.name || '-'}
+        Session: {cashierState.session?.sessionId || '-'} • Cashier: {cashierState.session?.cashier.name || '-'}
       </Typography>
 
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -76,63 +71,61 @@ const CashierDashboard: React.FC = () => {
           <TextField
             size="small"
             placeholder="Search customer / phone / invoice"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={state.search}
+            onChange={(e) => actions.setSearch(e.target.value)}
             sx={{ minWidth: 260 }}
           />
           <Box sx={{ flexGrow: 1 }} />
           {settings.features?.posBulkDiscounts && (
-            <Button variant="outlined" onClick={() => setShowDiscount(true)}>Bulk Discount</Button>
+            <Button variant="outlined" onClick={() => actions.showModal('showDiscount')}>Bulk Discount</Button>
           )}
           {settings.features?.posPayments && (
             <>
-              <Button variant="contained" onClick={() => setShowPayment(true)}>Collect Payment</Button>
+              <Button variant="contained" onClick={() => actions.showModal('showPayment')}>Collect Payment</Button>
               <Button 
                 variant="contained" 
                 color="primary" 
-                onClick={() => setShowCashCollection(true)}
-                disabled={selectedInvoices.length === 0}
+                onClick={() => actions.showModal('showCashCollection')}
+                disabled={state.selectedInvoices.length === 0}
               >
-                Cash Collection ({selectedInvoices.length})
+                Cash Collection ({state.selectedInvoices.length})
               </Button>
             </>
           )}
           {settings.features?.posPayouts && (
-            <Button variant="outlined" color="warning" onClick={() => setShowPayout(true)}>Record Payout</Button>
+            <Button variant="outlined" color="warning" onClick={() => actions.showModal('showPayout')}>Record Payout</Button>
           )}
           {settings.features?.posCashInHand && (
-            <Button variant="outlined" onClick={() => setShowCashCount(true)}>Cash-in-Hand</Button>
+            <Button variant="outlined" onClick={() => actions.showModal('showCashCount')}>Cash-in-Hand</Button>
           )}
           {settings.features?.posEndOfDay && (
-            <Button variant="outlined" color="success" onClick={() => setShowEOD(true)}>End of Day</Button>
+            <Button variant="outlined" color="success" onClick={() => actions.showModal('showEOD')}>End of Day</Button>
           )}
         </Box>
       </Paper>
 
       <Paper sx={{ p: 2 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" allowScrollButtonsMobile>
-          <Tab label={`Today Invoices (${todayInvoices.length})`} />
-          <Tab label={`Pending Delivery (${pendingDeliveries.length})`} />
+        <Tabs value={state.tab} onChange={(_, v) => actions.setTab(v)} variant="scrollable" allowScrollButtonsMobile>
+          <Tab label={`Today Invoices (${state.todayInvoices.length})`} />
+          <Tab label={`Pending Delivery (${state.pendingDeliveries.length})`} />
         </Tabs>
         <Box sx={{ mt: 2 }}>
-          {tab === 0 && (
+          {state.tab === 0 && (
             <Grid container spacing={2}>
-              {todayInvoices.map((inv) => (
+              {state.todayInvoices.map((inv) => (
                 <Grid item xs={12} md={6} lg={4} key={inv.id}>
-                  <Paper sx={{ p: 2, border: selectedInvoices.find(s => s.id === inv.id) ? '2px solid #1976d2' : '1px solid #e0e0e0' }}>
+                  <Paper sx={{ p: 2, border: state.selectedInvoices.find(s => s.id === inv.id) ? '2px solid #1976d2' : '1px solid #e0e0e0' }}>
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={selectedInvoices.some(s => s.id === inv.id)}
+                          checked={state.selectedInvoices.some(s => s.id === inv.id)}
                           onChange={() => {
-                            setSelectedInvoices(prev => {
-                              const exists = prev.find(s => s.id === inv.id);
-                              if (exists) {
-                                return prev.filter(s => s.id !== inv.id);
-                              } else {
-                                return [...prev, inv];
-                              }
-                            });
+                            const exists = state.selectedInvoices.find(s => s.id === inv.id);
+                            if (exists) {
+                              actions.setSelectedInvoices(state.selectedInvoices.filter(s => s.id !== inv.id));
+                            } else {
+                              actions.setSelectedInvoices([...state.selectedInvoices, inv]);
+                            }
                           }}
                         />
                       }
@@ -148,9 +141,9 @@ const CashierDashboard: React.FC = () => {
               ))}
             </Grid>
           )}
-          {tab === 1 && (
+          {state.tab === 1 && (
             <Grid container spacing={2}>
-              {pendingDeliveries.map((inv) => (
+              {state.pendingDeliveries.map((inv) => (
                 <Grid item xs={12} md={6} lg={4} key={inv.id}>
                   <Paper sx={{ p: 2 }}>
                     <Typography variant="subtitle1">{inv.customerName}</Typography>
@@ -167,37 +160,37 @@ const CashierDashboard: React.FC = () => {
     </Box>
     {settings.features?.posBulkDiscounts && (
     <BulkDiscountDialog
-      open={showDiscount}
-      onClose={() => setShowDiscount(false)}
-      invoices={tab === 0 ? todayInvoices : pendingDeliveries}
+      open={state.modals.showDiscount}
+      onClose={() => actions.hideModal('showDiscount')}
+      invoices={state.tab === 0 ? state.todayInvoices : state.pendingDeliveries}
       onSubmit={async (invoiceIds, totalDiscount) => {
         // Manager approval threshold (could be feature flag/setting later)
         const threshold = 1000; // example
         if (settings.features?.posManagerApproval && totalDiscount > threshold) {
-          setShowDiscount(false);
-          setShowApproval(true);
+          actions.hideModal('showDiscount');
+          actions.showModal('showApproval');
           return;
         }
         const res = await posService.applyBulkDiscount(invoiceIds, totalDiscount);
-        setToast({ open: true, message: `Discount applied to ${res.updated.length} invoices`, severity: 'success' });
+        actions.showToast({ message: `Discount applied to ${res.updated.length} invoices`, severity: 'success' });
       }}
     />
     )}
     {settings.features?.posManagerApproval && (
     <ManagerApprovalDialog
-      open={showApproval}
-      onClose={() => setShowApproval(false)}
+      open={state.modals.showApproval}
+      onClose={() => actions.hideModal('showApproval')}
       onApprove={async () => {
-        setShowApproval(false);
-        setToast({ open: true, message: 'Manager approval captured. Apply the discount from your last input.', severity: 'info' });
+        actions.hideModal('showApproval');
+        actions.showToast({ message: 'Manager approval captured. Apply the discount from your last input.', severity: 'info' });
       }}
     />
     )}
     {settings.features?.posPayments && (
     <PaymentModal
-      open={showPayment}
-      onClose={() => setShowPayment(false)}
-      invoices={tab === 0 ? todayInvoices : pendingDeliveries}
+      open={state.modals.showPayment}
+      onClose={() => actions.hideModal('showPayment')}
+      invoices={state.tab === 0 ? state.todayInvoices : state.pendingDeliveries}
       onSubmit={async ({ invoiceId, mode, amount, reference, tags }) => {
         await posService.recordPayment({
           id: '',
@@ -208,52 +201,52 @@ const CashierDashboard: React.FC = () => {
           tags,
           createdAt: ''
         } as any);
-        setToast({ open: true, message: 'Payment recorded', severity: 'success' });
+        actions.showToast({ message: 'Payment recorded', severity: 'success' });
       }}
     />
     )}
     {settings.features?.posPayouts && (
     <PayoutModal
-      open={showPayout}
-      onClose={() => setShowPayout(false)}
+      open={state.modals.showPayout}
+      onClose={() => actions.hideModal('showPayout')}
       onSuccess={(payout) => {
-        setShowPayout(false);
-        setToast({ open: true, message: `Payout of $${payout.amount} recorded successfully`, severity: 'success' });
+        actions.hideModal('showPayout');
+        actions.showToast({ message: `Payout of $${payout.amount} recorded successfully`, severity: 'success' });
       }}
     />
     )}
     {settings.features?.posCashInHand && (
     <CashInHandDialog
-      open={showCashCount}
-      onClose={() => setShowCashCount(false)}
+      open={state.modals.showCashCount}
+      onClose={() => actions.hideModal('showCashCount')}
       onSubmit={async ({ denominations }) => {
-        await posService.updateCashInHand({ denominations, sessionId: state.session?.sessionId || '' } as any);
-        setToast({ open: true, message: 'Cash count saved', severity: 'success' });
+        await posService.updateCashInHand({ denominations, sessionId: cashierState.session?.sessionId || '' } as any);
+        actions.showToast({ message: 'Cash count saved', severity: 'success' });
       }}
     />
     )}
     {settings.features?.posEndOfDay && (
     <EODDialog
-      open={showEOD}
-      onClose={() => setShowEOD(false)}
+      open={state.modals.showEOD}
+      onClose={() => actions.hideModal('showEOD')}
       onSubmit={async (shareWith) => {
-        await posService.generateEOD(state.session?.sessionId || '', { shareWith });
-        setToast({ open: true, message: 'EOD report generated', severity: 'success' });
+        await posService.generateEOD(cashierState.session?.sessionId || '', { shareWith });
+        actions.showToast({ message: 'EOD report generated', severity: 'success' });
       }}
     />
     )}
     {settings.features?.posPayments && (
     <CashCollectionModal
-      open={showCashCollection}
-      onClose={() => setShowCashCollection(false)}
+      open={state.modals.showCashCollection}
+      onClose={() => actions.hideModal('showCashCollection')}
       onSuccess={(collection) => {
-        setShowCashCollection(false);
-        setSelectedInvoices([]);
-        setToast({ open: true, message: `Cash collection of $${collection.totalAmount} processed successfully`, severity: 'success' });
+        actions.hideModal('showCashCollection');
+        actions.setSelectedInvoices([]);
+        actions.showToast({ message: `Cash collection of $${collection.totalAmount} processed successfully`, severity: 'success' });
         // Refresh invoices to show updated status
         loadData();
       }}
-      selectedInvoices={selectedInvoices.map(inv => ({
+      selectedInvoices={state.selectedInvoices.map(inv => ({
         name: inv.id,
         customer_name: inv.customerName,
         outstanding_amount: inv.outstandingAmount,
@@ -261,9 +254,9 @@ const CashierDashboard: React.FC = () => {
       }))}
     />
     )}
-    <Snackbar open={toast.open} autoHideDuration={4000} onClose={() => setToast(prev => ({ ...prev, open: false }))}>
-      <Alert onClose={() => setToast(prev => ({ ...prev, open: false }))} severity={toast.severity} sx={{ width: '100%' }}>
-        {toast.message}
+    <Snackbar open={state.toast.open} autoHideDuration={4000} onClose={() => actions.hideToast()}>
+      <Alert onClose={() => actions.hideToast()} severity={state.toast.severity} sx={{ width: '100%' }}>
+        {state.toast.message}
       </Alert>
     </Snackbar>
     </>
