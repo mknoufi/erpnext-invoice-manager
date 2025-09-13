@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import './mockInterceptor'; // Setup mock interceptor
 
 const baseURL = process.env.REACT_APP_ERPNEXT_URL;
 
