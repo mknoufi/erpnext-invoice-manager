@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useReducer } from 'react';
 import { Box, Grid, Paper, Typography, TextField, Tabs, Tab, Button, Snackbar, Alert, Checkbox, FormControlLabel } from '@mui/material';
 import { useCashier } from '../contexts/CashierContext';
 import { useSettings } from '../contexts/SettingsContext';
@@ -13,35 +13,155 @@ import CashCollectionModal from '../components/pos/CashCollectionModal';
 import CashInHandDialog from '../components/pos/CashInHandDialog';
 import EODDialog from '../components/pos/EODDialog';
 
+// Enhanced state management with useReducer
+interface ModalState {
+  showDiscount: boolean;
+  showApproval: boolean;
+  showPayment: boolean;
+  showPayout: boolean;
+  showCashCollection: boolean;
+  showCashCount: boolean;
+  showEOD: boolean;
+}
+
+interface ToastState {
+  open: boolean;
+  message: string;
+  severity: 'success' | 'error' | 'info' | 'warning';
+}
+
+interface DashboardState {
+  modals: ModalState;
+  selectedInvoices: InvoiceSummary[];
+  toast: ToastState;
+  tab: number;
+  search: string;
+}
+
+type DashboardAction =
+  | { type: 'SET_MODAL'; modal: keyof ModalState; open: boolean }
+  | { type: 'SET_SELECTED_INVOICES'; invoices: InvoiceSummary[] }
+  | { type: 'TOGGLE_INVOICE_SELECTION'; invoice: InvoiceSummary }
+  | { type: 'CLEAR_SELECTED_INVOICES' }
+  | { type: 'SHOW_TOAST'; toast: Omit<ToastState, 'open'> }
+  | { type: 'HIDE_TOAST' }
+  | { type: 'SET_TAB'; tab: number }
+  | { type: 'SET_SEARCH'; search: string };
+
+const initialState: DashboardState = {
+  modals: {
+    showDiscount: false,
+    showApproval: false,
+    showPayment: false,
+    showPayout: false,
+    showCashCollection: false,
+    showCashCount: false,
+    showEOD: false,
+  },
+  selectedInvoices: [],
+  toast: { open: false, message: '', severity: 'success' },
+  tab: 0,
+  search: '',
+};
+
+function dashboardReducer(state: DashboardState, action: DashboardAction): DashboardState {
+  switch (action.type) {
+    case 'SET_MODAL':
+      return {
+        ...state,
+        modals: {
+          ...state.modals,
+          [action.modal]: action.open,
+        },
+      };
+    case 'SET_SELECTED_INVOICES':
+      return {
+        ...state,
+        selectedInvoices: action.invoices,
+      };
+    case 'TOGGLE_INVOICE_SELECTION':
+      const exists = state.selectedInvoices.find(s => s.id === action.invoice.id);
+      return {
+        ...state,
+        selectedInvoices: exists
+          ? state.selectedInvoices.filter(s => s.id !== action.invoice.id)
+          : [...state.selectedInvoices, action.invoice],
+      };
+    case 'CLEAR_SELECTED_INVOICES':
+      return {
+        ...state,
+        selectedInvoices: [],
+      };
+    case 'SHOW_TOAST':
+      return {
+        ...state,
+        toast: { ...action.toast, open: true },
+      };
+    case 'HIDE_TOAST':
+      return {
+        ...state,
+        toast: { ...state.toast, open: false },
+      };
+    case 'SET_TAB':
+      return {
+        ...state,
+        tab: action.tab,
+      };
+    case 'SET_SEARCH':
+      return {
+        ...state,
+        search: action.search,
+      };
+    default:
+      return state;
+  }
+}
+
 const CashierDashboard: React.FC = () => {
-  const { state } = useCashier();
+  const { state: cashierState } = useCashier();
   const { settings } = useSettings();
-  const [tab, setTab] = useState(0);
-  const [search, setSearch] = useState('');
+  const [state, dispatch] = useReducer(dashboardReducer, initialState);
   const [todayInvoices, setTodayInvoices] = useState<InvoiceSummary[]>([]);
   const [pendingDeliveries, setPendingDeliveries] = useState<InvoiceSummary[]>([]);
-  const [showDiscount, setShowDiscount] = useState(false);
-  const [showApproval, setShowApproval] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [showPayout, setShowPayout] = useState(false);
-  const [showCashCollection, setShowCashCollection] = useState(false);
-  const [showCashCount, setShowCashCount] = useState(false);
-  const [showEOD, setShowEOD] = useState(false);
-  const [selectedInvoices, setSelectedInvoices] = useState<InvoiceSummary[]>([]);
-  const [toast, setToast] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' | 'warning' }>({ open: false, message: '', severity: 'success' });
+
+  // Enhanced action creators for better maintainability
+  const openModal = useCallback((modal: keyof ModalState) => {
+    dispatch({ type: 'SET_MODAL', modal, open: true });
+  }, []);
+
+  const closeModal = useCallback((modal: keyof ModalState) => {
+    dispatch({ type: 'SET_MODAL', modal, open: false });
+  }, []);
+
+  const showToast = useCallback((message: string, severity: ToastState['severity'] = 'success') => {
+    dispatch({ type: 'SHOW_TOAST', toast: { message, severity } });
+  }, []);
+
+  const hideToast = useCallback(() => {
+    dispatch({ type: 'HIDE_TOAST' });
+  }, []);
+
+  const toggleInvoiceSelection = useCallback((invoice: InvoiceSummary) => {
+    dispatch({ type: 'TOGGLE_INVOICE_SELECTION', invoice });
+  }, []);
+
+  const clearSelectedInvoices = useCallback(() => {
+    dispatch({ type: 'CLEAR_SELECTED_INVOICES' });
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
       const [inv, del] = await Promise.all([
-        posService.listTodayInvoices({ search }),
-        posService.listPendingDeliveries({ search }),
+        posService.listTodayInvoices({ search: state.search }),
+        posService.listPendingDeliveries({ search: state.search }),
       ]);
       setTodayInvoices(inv);
       setPendingDeliveries(del);
     } catch (error) {
       console.error('Error loading data:', error);
+      showToast('Failed to load invoice data', 'error');
     }
-  }, [search]);
+  }, [state.search, showToast]);
 
   useEffect(() => {
     loadData();
@@ -50,16 +170,20 @@ const CashierDashboard: React.FC = () => {
   useEffect(() => {
     // Realtime: refresh lists when ERPNext pushes updates
     const offInv = subscribeToDocType('Sales Invoice', () => {
-      posService.listTodayInvoices({ search }).then(setTodayInvoices).catch(() => {});
+      posService.listTodayInvoices({ search: state.search }).then(setTodayInvoices).catch(() => {
+        showToast('Failed to update today invoices', 'warning');
+      });
     });
     const offDel = subscribeToDocType('Delivery Note', () => {
-      posService.listPendingDeliveries({ search }).then(setPendingDeliveries).catch(() => {});
+      posService.listPendingDeliveries({ search: state.search }).then(setPendingDeliveries).catch(() => {
+        showToast('Failed to update pending deliveries', 'warning');
+      });
     });
     return () => {
       offInv();
       offDel();
     };
-  }, [search]);
+  }, [state.search, showToast]);
 
   return (
     <>
@@ -68,7 +192,7 @@ const CashierDashboard: React.FC = () => {
         Cashier Dashboard
       </Typography>
       <Typography variant="body2" color="text.secondary" gutterBottom>
-        Session: {state.session?.sessionId || '-'} • Cashier: {state.session?.cashier.name || '-'}
+        Session: {cashierState.session?.sessionId || '-'} • Cashier: {cashierState.session?.cashier.name || '-'}
       </Typography>
 
       <Paper sx={{ p: 2, mb: 2 }}>
@@ -76,64 +200,55 @@ const CashierDashboard: React.FC = () => {
           <TextField
             size="small"
             placeholder="Search customer / phone / invoice"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={state.search}
+            onChange={(e) => dispatch({ type: 'SET_SEARCH', search: e.target.value })}
             sx={{ minWidth: 260 }}
           />
           <Box sx={{ flexGrow: 1 }} />
           {settings.features?.posBulkDiscounts && (
-            <Button variant="outlined" onClick={() => setShowDiscount(true)}>Bulk Discount</Button>
+            <Button variant="outlined" onClick={() => openModal('showDiscount')}>Bulk Discount</Button>
           )}
           {settings.features?.posPayments && (
             <>
-              <Button variant="contained" onClick={() => setShowPayment(true)}>Collect Payment</Button>
+              <Button variant="contained" onClick={() => openModal('showPayment')}>Collect Payment</Button>
               <Button 
                 variant="contained" 
                 color="primary" 
-                onClick={() => setShowCashCollection(true)}
-                disabled={selectedInvoices.length === 0}
+                onClick={() => openModal('showCashCollection')}
+                disabled={state.selectedInvoices.length === 0}
               >
-                Cash Collection ({selectedInvoices.length})
+                Cash Collection ({state.selectedInvoices.length})
               </Button>
             </>
           )}
           {settings.features?.posPayouts && (
-            <Button variant="outlined" color="warning" onClick={() => setShowPayout(true)}>Record Payout</Button>
+            <Button variant="outlined" color="warning" onClick={() => openModal('showPayout')}>Record Payout</Button>
           )}
           {settings.features?.posCashInHand && (
-            <Button variant="outlined" onClick={() => setShowCashCount(true)}>Cash-in-Hand</Button>
+            <Button variant="outlined" onClick={() => openModal('showCashCount')}>Cash-in-Hand</Button>
           )}
           {settings.features?.posEndOfDay && (
-            <Button variant="outlined" color="success" onClick={() => setShowEOD(true)}>End of Day</Button>
+            <Button variant="outlined" color="success" onClick={() => openModal('showEOD')}>End of Day</Button>
           )}
         </Box>
       </Paper>
 
       <Paper sx={{ p: 2 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" allowScrollButtonsMobile>
+        <Tabs value={state.tab} onChange={(_, v) => dispatch({ type: 'SET_TAB', tab: v })} variant="scrollable" allowScrollButtonsMobile>
           <Tab label={`Today Invoices (${todayInvoices.length})`} />
           <Tab label={`Pending Delivery (${pendingDeliveries.length})`} />
         </Tabs>
         <Box sx={{ mt: 2 }}>
-          {tab === 0 && (
+          {state.tab === 0 && (
             <Grid container spacing={2}>
               {todayInvoices.map((inv) => (
                 <Grid item xs={12} md={6} lg={4} key={inv.id}>
-                  <Paper sx={{ p: 2, border: selectedInvoices.find(s => s.id === inv.id) ? '2px solid #1976d2' : '1px solid #e0e0e0' }}>
+                  <Paper sx={{ p: 2, border: state.selectedInvoices.find(s => s.id === inv.id) ? '2px solid #1976d2' : '1px solid #e0e0e0' }}>
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={selectedInvoices.some(s => s.id === inv.id)}
-                          onChange={() => {
-                            setSelectedInvoices(prev => {
-                              const exists = prev.find(s => s.id === inv.id);
-                              if (exists) {
-                                return prev.filter(s => s.id !== inv.id);
-                              } else {
-                                return [...prev, inv];
-                              }
-                            });
-                          }}
+                          checked={state.selectedInvoices.some(s => s.id === inv.id)}
+                          onChange={() => toggleInvoiceSelection(inv)}
                         />
                       }
                       label=""
@@ -148,7 +263,7 @@ const CashierDashboard: React.FC = () => {
               ))}
             </Grid>
           )}
-          {tab === 1 && (
+          {state.tab === 1 && (
             <Grid container spacing={2}>
               {pendingDeliveries.map((inv) => (
                 <Grid item xs={12} md={6} lg={4} key={inv.id}>
@@ -167,93 +282,114 @@ const CashierDashboard: React.FC = () => {
     </Box>
     {settings.features?.posBulkDiscounts && (
     <BulkDiscountDialog
-      open={showDiscount}
-      onClose={() => setShowDiscount(false)}
-      invoices={tab === 0 ? todayInvoices : pendingDeliveries}
+      open={state.modals.showDiscount}
+      onClose={() => closeModal('showDiscount')}
+      invoices={state.tab === 0 ? todayInvoices : pendingDeliveries}
       onSubmit={async (invoiceIds, totalDiscount) => {
-        // Manager approval threshold (could be feature flag/setting later)
-        const threshold = 1000; // example
-        if (settings.features?.posManagerApproval && totalDiscount > threshold) {
-          setShowDiscount(false);
-          setShowApproval(true);
-          return;
+        try {
+          // Manager approval threshold (could be feature flag/setting later)
+          const threshold = 1000; // example
+          if (settings.features?.posManagerApproval && totalDiscount > threshold) {
+            closeModal('showDiscount');
+            openModal('showApproval');
+            return;
+          }
+          const res = await posService.applyBulkDiscount(invoiceIds, totalDiscount);
+          showToast(`Discount applied to ${res.updated.length} invoices`, 'success');
+          closeModal('showDiscount');
+        } catch (error) {
+          showToast('Failed to apply bulk discount', 'error');
         }
-        const res = await posService.applyBulkDiscount(invoiceIds, totalDiscount);
-        setToast({ open: true, message: `Discount applied to ${res.updated.length} invoices`, severity: 'success' });
       }}
     />
     )}
     {settings.features?.posManagerApproval && (
     <ManagerApprovalDialog
-      open={showApproval}
-      onClose={() => setShowApproval(false)}
+      open={state.modals.showApproval}
+      onClose={() => closeModal('showApproval')}
       onApprove={async () => {
-        setShowApproval(false);
-        setToast({ open: true, message: 'Manager approval captured. Apply the discount from your last input.', severity: 'info' });
+        closeModal('showApproval');
+        showToast('Manager approval captured. Apply the discount from your last input.', 'info');
       }}
     />
     )}
     {settings.features?.posPayments && (
     <PaymentModal
-      open={showPayment}
-      onClose={() => setShowPayment(false)}
-      invoices={tab === 0 ? todayInvoices : pendingDeliveries}
+      open={state.modals.showPayment}
+      onClose={() => closeModal('showPayment')}
+      invoices={state.tab === 0 ? todayInvoices : pendingDeliveries}
       onSubmit={async ({ invoiceId, mode, amount, reference, tags }) => {
-        await posService.recordPayment({
-          id: '',
-          invoiceId,
-          mode,
-          amount: { currency: 'INR', value: amount },
-          reference,
-          tags,
-          createdAt: ''
-        } as any);
-        setToast({ open: true, message: 'Payment recorded', severity: 'success' });
+        try {
+          await posService.recordPayment({
+            id: '',
+            invoiceId,
+            mode,
+            amount: { currency: 'INR', value: amount },
+            reference,
+            tags,
+            createdAt: ''
+          } as any);
+          showToast('Payment recorded', 'success');
+          closeModal('showPayment');
+          loadData(); // Refresh data
+        } catch (error) {
+          showToast('Failed to record payment', 'error');
+        }
       }}
     />
     )}
     {settings.features?.posPayouts && (
     <PayoutModal
-      open={showPayout}
-      onClose={() => setShowPayout(false)}
+      open={state.modals.showPayout}
+      onClose={() => closeModal('showPayout')}
       onSuccess={(payout) => {
-        setShowPayout(false);
-        setToast({ open: true, message: `Payout of $${payout.amount} recorded successfully`, severity: 'success' });
+        closeModal('showPayout');
+        showToast(`Payout of $${payout.amount} recorded successfully`, 'success');
       }}
     />
     )}
     {settings.features?.posCashInHand && (
     <CashInHandDialog
-      open={showCashCount}
-      onClose={() => setShowCashCount(false)}
+      open={state.modals.showCashCount}
+      onClose={() => closeModal('showCashCount')}
       onSubmit={async ({ denominations }) => {
-        await posService.updateCashInHand({ denominations, sessionId: state.session?.sessionId || '' } as any);
-        setToast({ open: true, message: 'Cash count saved', severity: 'success' });
+        try {
+          await posService.updateCashInHand({ denominations, sessionId: cashierState.session?.sessionId || '' } as any);
+          showToast('Cash count saved', 'success');
+          closeModal('showCashCount');
+        } catch (error) {
+          showToast('Failed to save cash count', 'error');
+        }
       }}
     />
     )}
     {settings.features?.posEndOfDay && (
     <EODDialog
-      open={showEOD}
-      onClose={() => setShowEOD(false)}
+      open={state.modals.showEOD}
+      onClose={() => closeModal('showEOD')}
       onSubmit={async (shareWith) => {
-        await posService.generateEOD(state.session?.sessionId || '', { shareWith });
-        setToast({ open: true, message: 'EOD report generated', severity: 'success' });
+        try {
+          await posService.generateEOD(cashierState.session?.sessionId || '', { shareWith });
+          showToast('EOD report generated', 'success');
+          closeModal('showEOD');
+        } catch (error) {
+          showToast('Failed to generate EOD report', 'error');
+        }
       }}
     />
     )}
     {settings.features?.posPayments && (
     <CashCollectionModal
-      open={showCashCollection}
-      onClose={() => setShowCashCollection(false)}
+      open={state.modals.showCashCollection}
+      onClose={() => closeModal('showCashCollection')}
       onSuccess={(collection) => {
-        setShowCashCollection(false);
-        setSelectedInvoices([]);
-        setToast({ open: true, message: `Cash collection of $${collection.totalAmount} processed successfully`, severity: 'success' });
+        closeModal('showCashCollection');
+        clearSelectedInvoices();
+        showToast(`Cash collection of $${collection.totalAmount} processed successfully`, 'success');
         // Refresh invoices to show updated status
         loadData();
       }}
-      selectedInvoices={selectedInvoices.map(inv => ({
+      selectedInvoices={state.selectedInvoices.map(inv => ({
         name: inv.id,
         customer_name: inv.customerName,
         outstanding_amount: inv.outstandingAmount,
@@ -261,9 +397,9 @@ const CashierDashboard: React.FC = () => {
       }))}
     />
     )}
-    <Snackbar open={toast.open} autoHideDuration={4000} onClose={() => setToast(prev => ({ ...prev, open: false }))}>
-      <Alert onClose={() => setToast(prev => ({ ...prev, open: false }))} severity={toast.severity} sx={{ width: '100%' }}>
-        {toast.message}
+    <Snackbar open={state.toast.open} autoHideDuration={4000} onClose={hideToast}>
+      <Alert onClose={hideToast} severity={state.toast.severity} sx={{ width: '100%' }}>
+        {state.toast.message}
       </Alert>
     </Snackbar>
     </>
