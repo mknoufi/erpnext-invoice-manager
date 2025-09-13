@@ -1,108 +1,205 @@
 # ERPNext Invoice Manager
 
-A modern React-based web application for managing and tracking invoice payments with real-time updates from ERPNext.
+A modern, production-ready React application for managing invoices with ERPNext integration, featuring a comprehensive POS system, cashier balance reconciliation, and advanced analytics.
 
-## Features
+## 🚀 Features
 
-- View a list of invoices with their payment status
-- Filter invoices by status (All, Unpaid, Overdue)
-- Select multiple invoices and mark them as paid
-- Real-time updates when invoices are modified in ERPNext
-- Responsive design that works on desktop and mobile
-- Clean, modern UI built with Material-UI
+### Core Functionality
+- **Invoice Management**: Create, edit, and manage invoices with real-time ERPNext sync
+- **POS System**: Complete point-of-sale functionality with cashier workflows
+- **Cashier Balance**: Advanced cash reconciliation with denomination counting
+- **Payment Integration**: Multi-gateway payment processing (Stripe, PayPal, Bank Transfer)
+- **Analytics Dashboard**: Real-time insights and reporting
+- **PWA Support**: Progressive Web App with offline capabilities
 
-## Prerequisites
+### Security & Compliance
+- **Two-Factor Authentication**: Enhanced security with 2FA setup
+- **Audit Logging**: Comprehensive activity tracking
+- **Role-Based Access**: Granular permission system
+- **Data Encryption**: Secure data handling and storage
 
-- Node.js (v14 or later)
-- npm or yarn
-- Access to an ERPNext instance with API access
-- API credentials (API Key and Secret) from ERPNext
+### Modern UI/UX
+- **Responsive Design**: Optimized for all screen sizes
+- **Material-UI Components**: Modern, accessible interface
+- **Dark/Light Themes**: Customizable appearance
+- **Real-time Updates**: Live data synchronization
 
-## Setup
+## 🛠️ Technology Stack
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd erpnext-invoice-manager
-   ```
+- **Frontend**: React 18, TypeScript, Material-UI
+- **State Management**: React Context API, TanStack Query
+- **Build Tool**: Create React App with custom configuration
+- **Testing**: Jest, React Testing Library
+- **PWA**: Service Worker, Web App Manifest
+- **Backend Integration**: ERPNext v15 API
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+## 📦 Installation
 
-3. Create a `.env` file in the root directory with your ERPNext credentials:
-   ```env
-   REACT_APP_ERPNEXT_URL=http://your-erpnext-instance
-   REACT_APP_API_KEY=your_api_key_here
-   REACT_APP_API_SECRET=your_api_secret_here
-   ```
+### Prerequisites
+- Node.js 18+ (recommended: Node.js 20+)
+- npm 9+
+- ERPNext instance (v15+)
 
-4. Start the development server:
-   ```bash
-   npm start
-   ```
+### Setup
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/erpnext-invoice-manager.git
+cd erpnext-invoice-manager
 
-5. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+# Install dependencies
+npm install --legacy-peer-deps
 
-## Available Scripts
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your ERPNext configuration
 
-In the project directory, you can run:
+# Start development server
+npm start
+```
 
-### `npm start`
+### Environment Configuration
+Create a `.env` file with the following variables:
+```env
+REACT_APP_ERPNEXT_URL=https://your-erpnext-instance.com
+REACT_APP_ERPNEXT_API_KEY=your_api_key
+REACT_APP_ERPNEXT_API_SECRET=your_api_secret
+REACT_APP_ERPNEXT_COMPANY=your_company
+REACT_APP_LOG_LEVEL=debug
+REACT_APP_ENABLE_TELEMETRY=false
+```
 
-Runs the app in development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## 🏗️ Project Structure
 
-The page will reload when you make changes and show any lint errors in the console.
+```
+src/
+├── api/                    # API services and client
+├── components/             # React components
+│   ├── analytics/         # Analytics dashboard
+│   ├── common/            # Reusable components
+│   ├── payments/          # Payment processing
+│   ├── pos/              # Point of sale system
+│   ├── security/         # Authentication & security
+│   └── settings/         # Configuration panels
+├── contexts/              # React contexts
+├── hooks/                 # Custom React hooks
+├── pages/                 # Page components
+├── services/              # Business logic services
+├── types/                 # TypeScript type definitions
+└── utils/                 # Utility functions
+```
 
-### `npm run build`
+## 🧪 Testing
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+# Run all tests
+npm test
 
-### `npm test`
+# Run tests with coverage
+npm test -- --coverage
 
-Launches the test runner in interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# Run specific test file
+npm test -- --testPathPattern=Simple.test.tsx
+```
 
-## ERPNext Setup
+## 🏭 Building for Production
 
-For this application to work with your ERPNext instance, make sure:
+```bash
+# Create production build
+npm run build
 
-1. API access is enabled in your ERPNext instance
-2. The API user has the necessary permissions to access Sales Invoices
-3. CORS is properly configured in ERPNext to allow requests from your application's domain
+# Build without source maps (recommended)
+npm run build
+```
 
-## Security Considerations
+The build artifacts will be stored in the `build/` directory.
 
-- Never commit your `.env` file to version control
-- Use environment variables for sensitive information
-- Ensure your ERPNext instance is secured with HTTPS in production
-- Regularly rotate your API keys and secrets
+## 🔧 Development
 
-### `npm run build`
+### Available Scripts
+- `npm start` - Start development server
+- `npm test` - Run test suite
+- `npm run build` - Create production build
+- `npm run lint` - Run ESLint
+- `npm run type-check` - Run TypeScript compiler
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Code Quality
+- **ESLint**: Configured with React and TypeScript rules
+- **TypeScript**: Strict type checking enabled
+- **Prettier**: Code formatting (optional)
+- **Husky**: Pre-commit hooks (recommended)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 📱 PWA Features
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- **Offline Support**: Works without internet connection
+- **Install Prompt**: Add to home screen
+- **Background Sync**: Sync data when online
+- **Push Notifications**: Real-time updates
+- **Caching**: Intelligent data caching
 
-### `npm run eject`
+## 🔐 Security Features
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+- **JWT Authentication**: Secure token-based auth
+- **2FA Support**: Two-factor authentication
+- **Audit Logging**: Track all user actions
+- **Input Validation**: Comprehensive data validation
+- **XSS Protection**: Cross-site scripting prevention
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 📊 Analytics & Reporting
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+- **Sales Analytics**: Revenue trends and insights
+- **Payment Analytics**: Payment method analysis
+- **Cashier Reports**: Daily reconciliation reports
+- **Performance Metrics**: System performance monitoring
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## 🤝 Contributing
 
-## Learn More
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Development Guidelines
+- Follow TypeScript best practices
+- Write tests for new features
+- Update documentation as needed
+- Follow the existing code style
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation**: Check the `/docs` folder for detailed guides
+- **Issues**: Report bugs via GitHub Issues
+- **Discussions**: Use GitHub Discussions for questions
+
+## 🗺️ Roadmap
+
+### Upcoming Features
+- [ ] Mobile app (React Native)
+- [ ] Advanced reporting
+- [ ] Multi-currency support
+- [ ] Inventory management
+- [ ] Customer management
+- [ ] Advanced analytics
+
+### Recent Updates
+- ✅ Cashier balance reconciliation system
+- ✅ PWA implementation
+- ✅ Advanced analytics dashboard
+- ✅ Multi-gateway payment integration
+- ✅ Security enhancements
+- ✅ Code optimization and cleanup
+
+## 🙏 Acknowledgments
+
+- ERPNext community for the excellent backend system
+- Material-UI team for the component library
+- React team for the amazing framework
+- All contributors who helped make this project better
+
+---
+
+**Made with ❤️ for modern businesses**
