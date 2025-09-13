@@ -48,10 +48,10 @@ type ExtendedErpNextSettings = Omit<ErpNextSettingsType, 'defaultLedgers' | 'syn
 	connectionTimeout?: number;
 };
 
-const toLedgerItems = (items?: string[] | LedgerItem[]): LedgerItem[] => {
-	if (!items) return [];
-	return items.map(item => (typeof item === 'string' ? { name: item, account_name: item } : item));
-};
+// const toLedgerItems = (items?: string[] | LedgerItem[]): LedgerItem[] => {
+// 	if (!items) return [];
+// 	return items.map(item => (typeof item === 'string' ? { name: item, account_name: item } : item));
+// };
 
 const ErpNextSettings: React.FC = () => {
   const { settings, saveSettings } = useSettings();

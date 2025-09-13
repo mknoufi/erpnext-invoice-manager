@@ -21,7 +21,6 @@ import {
   Alert,
   CircularProgress,
   Grid,
-  Divider,
   IconButton,
   Tooltip,
 } from '@mui/material';
@@ -35,8 +34,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   getPendingCashierCloses, 
   verifyCashierClose, 
-  rejectCashierClose,
-  getCashierClose 
+  rejectCashierClose
 } from '../../api/cashierService';
 import { CashierCloseResponse } from '../../types/cashier';
 import { formatCurrency } from '../../utils/cashierUtils';
