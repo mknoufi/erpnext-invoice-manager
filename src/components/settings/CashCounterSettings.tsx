@@ -18,12 +18,12 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useSettings } from '../../contexts/SettingsContext';
-import { CashCounterSettings } from '../../types/cashier';
+import { CashCounterSettings as CashCounterSettingsType } from '../../types/cashier';
 import logger from '../../utils/logger';
 
 const CASH_COUNTER_SETTINGS_KEY = 'cash_counter_settings';
 
-const DEFAULT_SETTINGS: CashCounterSettings = {
+const DEFAULT_SETTINGS: CashCounterSettingsType = {
   currency: 'INR',
   denominations: [2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1],
   account_mappings: {
@@ -36,8 +36,8 @@ const DEFAULT_SETTINGS: CashCounterSettings = {
 };
 
 export const CashCounterSettings: React.FC = () => {
-  const { settings, updateSettings } = useSettings();
-  const [formData, setFormData] = useState<CashCounterSettings>(DEFAULT_SETTINGS);
+  const { settings, saveSettings } = useSettings();
+  const [formData, setFormData] = useState<CashCounterSettingsType>(DEFAULT_SETTINGS);
   const [newDenomination, setNewDenomination] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -48,14 +48,14 @@ export const CashCounterSettings: React.FC = () => {
     setFormData(savedSettings);
   }, [settings]);
 
-  const handleInputChange = (field: keyof CashCounterSettings, value: any) => {
+  const handleInputChange = (field: keyof CashCounterSettingsType, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,
     }));
   };
 
-  const handleAccountMappingChange = (field: keyof CashCounterSettings['account_mappings'], value: string) => {
+  const handleAccountMappingChange = (field: keyof CashCounterSettingsType['account_mappings'], value: string) => {
     setFormData(prev => ({
       ...prev,
       account_mappings: {
@@ -104,8 +104,7 @@ export const CashCounterSettings: React.FC = () => {
       }
 
       // Update settings
-      await updateSettings({
-        ...settings,
+      saveSettings({
         cashCounter: formData,
       });
 

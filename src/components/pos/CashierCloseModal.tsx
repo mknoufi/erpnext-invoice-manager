@@ -12,16 +12,10 @@ import {
   Card,
   CardContent,
   Alert,
-  Divider,
-  Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   CircularProgress,
 } from '@mui/material';
 import { Save as SaveIcon, Send as SendIcon, Close as CloseIcon } from '@mui/icons-material';
-import { useQuery, useMutation } from '@tanstack/react-query';
+// import { useQuery, useMutation } from '@tanstack/react-query';
 import { useSettings } from '../../contexts/SettingsContext';
 import { 
   CashierClosePayload, 

@@ -16,7 +16,7 @@ import ThemeSettings from './ThemeSettings';
 import UISettings from './UISettings';
 import FeatureSettings from './FeatureSettings';
 import PaymentSettings from '../payments/PaymentSettings';
-import { CashCounterSettings } from './CashCounterSettings';
+import { CashCounterSettings as CashCounterSettingsComponent } from './CashCounterSettings';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -175,7 +175,7 @@ const SettingsPage: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={value} index={6}>
-          <CashCounterSettings />
+          <CashCounterSettingsComponent />
         </TabPanel>
       </Box>
     </Paper>

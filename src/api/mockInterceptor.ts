@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import cashierMockApi from '../mocks/cashierMock';
 import logger from '../utils/logger';
 
@@ -15,7 +15,7 @@ export const setupMockInterceptor = () => {
   const originalRequest = axios.request;
 
   // Override axios.request to intercept cashier API calls
-  axios.request = async (config: AxiosRequestConfig): Promise<AxiosResponse> => {
+  axios.request = async (config: AxiosRequestConfig): Promise<any> => {
     const url = config.url || '';
     const method = config.method?.toLowerCase() || 'get';
 

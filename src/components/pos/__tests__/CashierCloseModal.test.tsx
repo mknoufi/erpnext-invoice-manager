@@ -27,7 +27,7 @@ const mockSettings = {
     },
     variance_threshold: 100,
   },
-};
+} as any;
 
 const createTestQueryClient = () => new QueryClient({
   defaultOptions: {
@@ -49,7 +49,12 @@ describe('CashierCloseModal', () => {
   beforeEach(() => {
     mockUseSettings.mockReturnValue({
       settings: mockSettings,
-      updateSettings: jest.fn(),
+      saveSettings: jest.fn(),
+      resetSettings: jest.fn(),
+      upgradeSettings: jest.fn(),
+      toggleFeature: jest.fn(),
+      isFeatureEnabled: jest.fn(),
+      getAvailableFeatures: jest.fn(),
     });
   });
 
