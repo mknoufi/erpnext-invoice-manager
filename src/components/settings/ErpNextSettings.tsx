@@ -257,9 +257,7 @@ const ErpNextSettings: React.FC = () => {
 		}
 	};
 
-	const handleSelectChange = (e: SelectChangeEvent) => {
-		handleChange(e as any);
-	};
+
 
 	const toggleAdvanced = useCallback(() => setShowAdvanced(prev => !prev), []);
 	const handleSnackbarClose = () => setSnackbar(prev => ({ ...prev, open: false }));
